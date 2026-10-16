@@ -26,7 +26,8 @@ class Vector {
 
 export const SCRIPTS = [
   "random.js", "vehicle.js", "ray.js", "sensor-settings.js", "sim-speed.js", "circuits-data.js", "training-circuits-data.js", "circuit.js",
-  "track-renderer.js", "circuit-showroom.js", "brands.js", "network-config.js", "neural-network.js", "architecture.js", "grass.js", "confidence.js", "car-design.js", "obstacle.js", "car.js",
+  "track-renderer.js", "circuit-showroom.js", "brands.js", "network-config.js", "neural-network.js", "architecture.js", "grass.js", "confidence.js", "car-design.js", "obstacle.js",
+  "obstacle-catalog.js", "obstacle-placement.js", "obstacle-showroom.js", "car.js",
   "evolution.js", "garage.js", "curriculum.js", "showroom.js", "model-file.js", "ray-editor.js", "network-viewer.js"
 ];
 
@@ -41,11 +42,13 @@ export function createMemoryStorage(initial = {}) {
   };
 }
 
-export function loadExample(files = SCRIPTS) {
+// globals : objets ajoutés au contexte (ex. un faux `document` pour une interface).
+export function loadExample(files = SCRIPTS, globals = {}) {
   const context = vm.createContext({
     p5: { Vector },
-    Math, Map, Set, Array, Object, Number, JSON,
-    createVector: (x = 0, y = 0) => new Vector(x, y)
+    Math, Map, Set, Array, Object, Number, JSON, String, RegExp, Error,
+    createVector: (x = 0, y = 0) => new Vector(x, y),
+    ...globals
   });
   for (const file of files) {
     const filename = path.join(exampleDir, file);
@@ -78,6 +81,13 @@ export function loadExample(files = SCRIPTS) {
     Obstacle, OBSTACLE_PRESETS, OBSTACLES_STORAGE_KEY, OBSTACLE_MIN_POINTS, OBSTACLE_MAX_POINTS,
     polygonArea, polygonCentroid, validateShape, normalizeShape, pointInPolygon,
     loadObstacles, saveObstacles, obstacleWalls, obstacleIndexAt,
+    BUILT_IN_OBSTACLES, OBSTACLE_PROTOS_STORAGE_KEY, PROTO_MAX_COUNT, OBSTACLE_MIN_SIZE_M, OBSTACLE_MAX_SIZE_M,
+    toUnitShape, isValidUnitShape, obstacleShape, clampSize, protoNumber, nextProtoName, createProto, loadProtos, saveProtos, obstacleCatalog,
+    RANDOM_OBSTACLES_MAX, RANDOM_PLACEMENT_ATTEMPTS, START_CLEAR_AHEAD_CARS, START_CLEAR_BEHIND_CARS,
+    PASSAGE_CAR_WIDTHS, OBSTACLE_GAP_CAR_WIDTHS, normalizeRequests, lateralOffsetAt, freePassage, obstacleGap,
+    distanceFromStart, obstacleRadius, placementProblem, tryPlaceObstacle, placeRandomObstacles,
+    OBSTACLE_THUMB_SIZE, RANDOM_COUNT_MAX, thumbnailPoints, clampCount, randomButtonLabel, obstacleCardFacts,
+    ObstacleShowroom, drawObstacleThumbnail,
     allCircuitEntries, circuitLayout, thumbnailScale, circuitCardInfo, drawTrackThumbnail,
     CIRCUIT_THUMB_WIDTH, CIRCUIT_THUMB_HEIGHT, CONFIDENCE_START, CONFIDENCE_MIN, CONFIDENCE_MAX,
 

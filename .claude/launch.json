@@ -1,7 +1,40 @@
 {
   "version": "0.0.1",
   "configurations": [
-    { "name": "routes-6", "runtimeExecutable": "python", "runtimeArgs": ["-m", "http.server", "8754"], "port": 8754 },
-    { "name": "f1-neuroevolution", "runtimeExecutable": "python", "runtimeArgs": ["-m", "http.server", "8761", "--directory", "11-F1-NeuroEvolution"], "port": 8761 }
+    {
+      "name": "routes-6",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8754"
+      ],
+      "port": 8754
+    },
+    {
+      "name": "f1-neuroevolution",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8761",
+        "--directory",
+        "11-F1-NeuroEvolution"
+      ],
+      "port": 8761
+    },
+    {
+      "name": "f1-neuroevolution-alt",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8763",
+        "--directory",
+        "11-F1-NeuroEvolution"
+      ],
+      "port": 8763,
+      "autoPort": false
+    }
   ]
 }

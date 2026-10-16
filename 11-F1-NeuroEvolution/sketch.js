@@ -29,6 +29,8 @@ let obstacles = [];                // obstacles du circuit affiché (obstacle.js
 let obstacleWallList = [];         // leurs côtés, vus comme des murs par les rayons
 let placing = null;                // obstacle en cours de placement { shape, rotation } ou null
 let obstacleEditor;
+let obstacleShowroom;              // vitrine des obstacles (obstacle-showroom.js)
+let obstacleProtos = [];           // prototypes dessinés : proto_1, proto_2… (obstacle-catalog.js)
 let removingObstacle = false;      // mode « Retirer un obstacle » : clic sur l'obstacle
 let canvasNotice = null;           // message temporaire sur le circuit { text, until }
 const NOTICE_DURATION_MS = 4000;
@@ -220,6 +222,7 @@ function onStorageChange(event) {
     showTopology();
     showRaysButton();
   }
+  if (event.key === OBSTACLE_PROTOS_STORAGE_KEY) obstacleProtos = loadProtos(safeLocalStorage());
   if (event.key === OBSTACLES_STORAGE_KEY) {
     obstacles = loadObstacles(safeLocalStorage(), circuitKey);
     refreshObstacles(false);
@@ -639,24 +642,62 @@ function levelInfoHtml() {
   return "";
 }
 
-// ---------- Obstacles (obstacle.js, obstacle-editor.js) ----------
+// ---------- Obstacles (obstacle.js, obstacle-editor.js, vitrine des obstacles) ----------
 
 function bindObstacles() {
-  const dialog = document.getElementById("obstacleDialog");
+  const pixelsPerMeter = TRACK_WIDTH / F1_TRACK_WIDTH_M;
+  obstacleProtos = loadProtos(safeLocalStorage());
+  obstacleShowroom = new ObstacleShowroom({
+    dialog: document.getElementById("obstacleShowroomDialog"),
+    grid: document.getElementById("obstacleGrid"),
+    hint: document.getElementById("obstacleShowroomHint"),
+    status: document.getElementById("obstacleShowroomStatus"),
+    placeModeButton: document.getElementById("obstacleModePlace"),
+    randomModeButton: document.getElementById("obstacleModeRandom"),
+    randomBar: document.getElementById("obstacleRandomBar"),
+    randomButton: document.getElementById("obstacleRandomButton"),
+    drawButton: document.getElementById("obstacleDrawButton"),
+    catalog: () => obstacleCatalog(obstacleProtos),
+    onPlace: (model) => startPlacing(obstacleShape(model, pixelsPerMeter)),
+    onRandom: placeObstaclesAtRandom,
+    onDraw: () => {
+      obstacleShowroom.close();
+      obstacleEditor.open();
+    },
+    onRemove: (model) => {
+      obstacleProtos = obstacleProtos.filter((p) => p.id !== model.id);
+      saveProtos(safeLocalStorage(), obstacleProtos);
+    }
+  });
+  // Le dessin devient un prototype de la vitrine, qui s'ouvre sur lui.
   obstacleEditor = new ObstacleEditor({
-    dialog,
+    dialog: document.getElementById("obstacleDialog"),
     canvas: document.getElementById("obstacleCanvas"),
     sizeSlider: document.getElementById("obstacleSize"),
     sizeValue: document.getElementById("obstacleSizeValue"),
     status: document.getElementById("obstacleEditorStatus"),
-    placeButton: document.getElementById("obstaclePlaceButton"),
+    saveButton: document.getElementById("obstacleSaveButton"),
     presets: document.getElementById("obstaclePresets"),
-    onPlace: (points, sizeMeters) => {
-      startPlacing(normalizeShape(points, sizeMeters, TRACK_WIDTH / F1_TRACK_WIDTH_M));
+    nextName: () => nextProtoName(obstacleProtos),
+    onSave: (points, sizeMeters) => {
+      let proto;
+      try {
+        proto = createProto(obstacleProtos, points, sizeMeters);
+      } catch (error) {
+        document.getElementById("obstacleEditorStatus").textContent = error.message;
+        return;
+      }
+      obstacleProtos.push(proto);
+      saveProtos(safeLocalStorage(), obstacleProtos);
+      obstacleEditor.clear();
       obstacleEditor.close();
+      obstacleShowroom.open("place", proto.id);
+      obstacleShowroom.showStatus(`${proto.name} ajouté à la vitrine.`);
     }
   });
-  document.getElementById("drawObstacleButton").addEventListener("click", () => obstacleEditor.open());
+  document.getElementById("obstacleShowroomButton").addEventListener("click", () => obstacleShowroom.open("place"));
+  document.getElementById("randomObstaclesButton").addEventListener("click", () => obstacleShowroom.open("random"));
+  document.getElementById("obstacleShowroomClose").addEventListener("click", () => obstacleShowroom.close());
   document.getElementById("obstacleEditorClose").addEventListener("click", () => obstacleEditor.close());
   document.getElementById("obstacleUndo").addEventListener("click", () => obstacleEditor.undo());
   document.getElementById("obstacleClear").addEventListener("click", () => obstacleEditor.clear());
@@ -673,6 +714,18 @@ function bindObstacles() {
   // Placement : clic sur le circuit ; R tourne, Échap annule.
   document.querySelector("#canvas-container canvas").addEventListener("pointerdown", onCanvasPointerDown);
   document.addEventListener("keydown", onPlacementKey);
+}
+
+// Placement aléatoire demandé dans la vitrine : ajoute aux obstacles actuels.
+function placeObstaclesAtRandom(requests) {
+  const result = placeRandomObstacles(circuit, requests, obstacles, rng, TRACK_WIDTH / F1_TRACK_WIDTH_M);
+  placing = null;
+  removingObstacle = false;
+  obstacles.push(...result.placed);
+  refreshObstacles();
+  notify(result.missing === 0
+    ? `${result.placed.length} obstacle(s) placé(s) au hasard sur ${circuit.name}.`
+    : `${result.placed.length} obstacle(s) sur ${result.requested} placé(s) : plus assez de place libre sur ${circuit.name}.`);
 }
 
 function startPlacing(shape) {

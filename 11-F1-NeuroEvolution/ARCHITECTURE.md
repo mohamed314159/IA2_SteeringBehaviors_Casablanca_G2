@@ -23,6 +23,9 @@ Règle de mise à jour : chaque nouvelle demande est ajoutée à la pile sous la
 | 13 | Nouvelle règle de confiance (100 %, puis 50 %, puis paliers selon le progrès) | **DONE** |
 | 14 | Rayons à des angles différents (un rayon = un neurone d'entrée) ; vitrine sans fiche technique | **DONE** |
 | 15 | Menu épuré : lignées en haut, uniquement des boutons ; garage dans la vitrine des voitures ; longueur des rayons dans l'éditeur de rayons | **DONE** |
+| 16 | Vitrine des obstacles : obstacles dessinés enregistrés comme prototypes (`proto_1`, `proto_2`…), obstacles de série déjà dessinés, placement depuis la vitrine, placement aléatoire (types et nombres choisis dans la vitrine) | **DONE** |
+| 17 | Bouton en haut à droite de l'écran : retirer le décor d'herbe pour un rendu plus léger | à faire |
+| 18 | Effet de flammes sur la ligne d'arrivée quand une voiture la franchit | à faire |
 
 ### Étape 1 – Circuit, décor, marques, rayons — **DONE**
 - Trois circuits F1 stylisés (Monza, Spa, Interlagos) lissés par Catmull-Rom ; bords sans croisement vérifiés par les tests.
@@ -107,6 +110,18 @@ Règle de mise à jour : chaque nouvelle demande est ajoutée à la pile sous la
 - Garage déplacé dans la vitrine des voitures (Charger, Télécharger le modèle, Repartir de zéro) ; plus de liste des générations précédentes : la reprise part toujours de la dernière.
 - Longueur des rayons réglée dans l'éditeur de rayons ; « Retirer un obstacle » par clic sur le circuit.
 
+### Étape 16 – Vitrine des obstacles — **DONE**
+- Menu : « Vitrine des obstacles », « Obstacles au hasard », « Retirer un obstacle », « Retirer tous » (« Dessiner un obstacle » passe dans la vitrine).
+- Vitrine : 9 obstacles de série déjà dessinés + les prototypes dessinés, nommés `proto_1`, `proto_2`… ; « Placer sur le circuit » (placement au clic comme à l'étape 11) ; « Retirer de la vitrine » pour un prototype.
+- L'éditeur n'envoie plus la forme directement sur le circuit : « Enregistrer dans la vitrine » crée le prototype (forme normalisée + taille en mètres, mémorisée).
+- Mode « Placer au hasard » : nombre par obstacle (0 à 10, total ≤ 30) ; placement en essais bornés, hors zone de départ, passage libre ≥ 3 largeurs de voiture, écart ≥ 3 largeurs entre obstacles, sans déborder sur une autre portion du tracé ; les obstacles impossibles à placer sont comptés et signalés.
+
+### Étape 17 – Décor léger — à faire
+- Bouton en haut à droite de l'écran qui retire le décor d'herbe pour un rendu plus léger.
+
+### Étape 18 – Flammes sur la ligne d'arrivée — à faire
+- Effet de flammes sur la ligne d'arrivée lorsqu'une voiture la franchit.
+
 ## 2. Modèle (Reynolds)
 
 ```text
@@ -150,7 +165,10 @@ Règles de course (scène) : sortie de piste, immobilité, tours  (Car.applyRace
 | `garage.js` | Champions par lignée et fiche par circuit (record, confiance, validation), import d'un modèle |
 | `model-file.js` | Modèle en fichier JSON : export, nom de fichier, lecture et vérifications |
 | `obstacle.js` | `Obstacle extends Vehicle` (immobile) : polygone, murs, collision, mémorisation par circuit |
-| `obstacle-editor.js` | Éditeur de forme d'obstacle (fenêtre du menu) |
+| `obstacle-editor.js` | Éditeur de forme d'obstacle : le dessin devient un prototype de la vitrine |
+| `obstacle-catalog.js` | Obstacles de série, prototypes `proto_N` (nommage, création, mémorisation), forme en pixels |
+| `obstacle-placement.js` | Placement aléatoire (règle de scène) : zone de départ, passage libre, espacement, essais bornés |
+| `obstacle-showroom.js` | Vitrine des obstacles : modes « placer » et « au hasard », cartes, nombres saisis |
 | `circuit-showroom.js` | Vitrine des circuits : liste des circuits, miniatures, fiches, choix du circuit actuel |
 | `random.js` | Générateur aléatoire à graine (tests reproductibles) |
 | `sim-speed.js` | Accélération : pas de simulation par image, budget de temps, vitesse atteinte |
@@ -175,6 +193,7 @@ Règles de course (scène) : sortie de piste, immobilité, tours  (Car.applyRace
 | `f1-neuroevolution-ray-length-v1` | Longueur des rayons |
 | `f1-neuroevolution-sim-speed-v1` | Vitesse de simulation choisie |
 | `f1-neuroevolution-obstacles-v1` | Obstacles posés, par circuit |
+| `f1-neuroevolution-obstacle-protos-v1` | Prototypes d'obstacles dessinés (`proto_N`, forme normalisée, taille en mètres) |
 
 ## 6. Tests et livraison
 

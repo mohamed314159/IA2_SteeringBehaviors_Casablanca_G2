@@ -27,6 +27,9 @@
   <script src="car-design.js"></script>
   <script src="obstacle.js"></script>
   <script src="obstacle-editor.js"></script>
+  <script src="obstacle-catalog.js"></script>
+  <script src="obstacle-placement.js"></script>
+  <script src="obstacle-showroom.js"></script>
   <script src="ray-editor.js"></script>
   <script src="car.js"></script>
   <script src="evolution.js"></script>
@@ -65,10 +68,13 @@
         <button id="raysToggleButton" type="button" class="secondary" aria-pressed="true">Rayons du leader : affichés</button>
 
         <div class="buttons">
-          <button id="drawObstacleButton" type="button" class="secondary">Dessiner un obstacle</button>
-          <button id="removeObstacleButton" type="button" class="secondary">Retirer un obstacle</button>
+          <button id="obstacleShowroomButton" type="button" class="secondary">Vitrine des obstacles</button>
+          <button id="randomObstaclesButton" type="button" class="secondary">Obstacles au hasard</button>
         </div>
-        <button id="clearObstaclesButton" type="button" class="secondary">Retirer tous les obstacles</button>
+        <div class="buttons">
+          <button id="removeObstacleButton" type="button" class="secondary">Retirer un obstacle</button>
+          <button id="clearObstaclesButton" type="button" class="secondary">Retirer tous</button>
+        </div>
       </div>
     </aside>
     <div id="canvas-container"></div>
@@ -145,7 +151,7 @@
 
   <dialog id="obstacleDialog" aria-labelledby="obstacleTitle">
     <div class="dialog-head">
-      <h2 id="obstacleTitle">Dessiner un obstacle</h2>
+      <h2 id="obstacleTitle">Dessiner un prototype d'obstacle</h2>
       <button id="obstacleEditorClose" type="button" class="small">Fermer</button>
     </div>
     <div class="obstacle-editor">
@@ -160,10 +166,28 @@
         <label for="obstacleSize">Taille (plus grande dimension) : <span id="obstacleSizeValue">6 m</span></label>
         <input type="range" id="obstacleSize" min="2" max="20" step="1" value="6">
         <p id="obstacleEditorStatus" class="step" role="status"></p>
-        <button id="obstaclePlaceButton" type="button" class="place">Placer sur le circuit</button>
-        <p class="step">Ensuite : cliquez sur le circuit pour poser l'obstacle, R pour le tourner, Échap pour annuler.</p>
+        <button id="obstacleSaveButton" type="button" class="place">Enregistrer dans la vitrine</button>
+        <p class="step">Le dessin rejoint la vitrine des obstacles sous le nom proto_1, proto_2… ; on le place ensuite depuis la vitrine.</p>
       </div>
     </div>
+  </dialog>
+
+  <dialog id="obstacleShowroomDialog" aria-labelledby="obstacleShowroomTitle">
+    <div class="dialog-head">
+      <h2 id="obstacleShowroomTitle">Vitrine des obstacles</h2>
+      <button id="obstacleShowroomClose" type="button" class="small">Fermer</button>
+    </div>
+    <div class="buttons wrap obstacle-modes" role="group" aria-label="Mode de placement">
+      <button id="obstacleModePlace" type="button" class="small" aria-pressed="true">Placer un obstacle</button>
+      <button id="obstacleModeRandom" type="button" class="small" aria-pressed="false">Placer au hasard</button>
+      <button id="obstacleDrawButton" type="button" class="small">+ Dessiner un prototype</button>
+    </div>
+    <p id="obstacleShowroomHint" class="step"></p>
+    <p id="obstacleShowroomStatus" class="step" role="status"></p>
+    <div id="obstacleRandomBar" class="buttons" hidden>
+      <button id="obstacleRandomButton" type="button" class="place">Choisissez au moins un obstacle</button>
+    </div>
+    <div id="obstacleGrid" class="showroom-grid"></div>
   </dialog>
 
   <dialog id="confidenceDialog" aria-labelledby="confidenceTitle">

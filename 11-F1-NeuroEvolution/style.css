@@ -485,3 +485,57 @@ dialog button:disabled {
   max-height: 45vh;
   overflow-y: auto;
 }
+
+/* ---------- Vitrine des obstacles (étape 16) ---------- */
+#obstacleGrid {
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+}
+
+.obstacle-modes button[aria-pressed="true"] {
+  background: #e10600;
+  font-weight: bold;
+}
+
+.obstacle-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border: 3px solid #3c3f46;
+  padding: 6px;
+  background: #2a2d34;
+}
+
+.obstacle-card.selected {
+  border-color: #ffd800;
+}
+
+.obstacle-card canvas {
+  width: 100%;
+  height: auto;
+}
+
+.obstacle-card h3 {
+  margin: 4px 0 0;
+  font-size: 15px;
+  font-family: Consolas, monospace;
+}
+
+.obstacle-card .facts {
+  margin: 0 0 4px;
+  font-size: 12px;
+  color: #c7c7c7;
+}
+
+.obstacle-card button.select-car {
+  background: #e10600;
+  font-weight: bold;
+}
+
+.obstacle-count input {
+  width: 60px;
+}
+
+/* .buttons impose display: flex : l'attribut hidden doit rester prioritaire. */
+#obstacleRandomBar[hidden] {
+  display: none;
+}

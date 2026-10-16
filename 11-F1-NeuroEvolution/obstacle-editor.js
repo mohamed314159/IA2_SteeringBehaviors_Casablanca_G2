@@ -1,12 +1,14 @@
 // Éditeur d'obstacle (fenêtre du menu) : on dessine un polygone en cliquant
 // des points sur une grille, ou on part d'une forme toute faite, puis on
-// choisit la taille en mètres. « Placer sur le circuit » rend la forme au jeu.
+// choisit la taille en mètres. « Enregistrer dans la vitrine » en fait un
+// prototype (proto_1, proto_2…) de la vitrine des obstacles.
 const EDITOR_SIZE = 240;           // px du canevas de dessin
 const EDITOR_CLOSE_DISTANCE = 12;  // cliquer près du 1er point ferme la forme
 
 class ObstacleEditor {
-  // options : { dialog, canvas, sizeSlider, sizeValue, status, placeButton,
-  //             presets (élément), onPlace(points, sizeMeters) }
+  // options : { dialog, canvas, sizeSlider, sizeValue, status, saveButton,
+  //             presets (élément), nextName: () => nom du prochain prototype,
+  //             onSave(points, sizeMeters) }
   constructor(options) {
     this.options = options;
     this.points = [];
@@ -24,9 +26,9 @@ class ObstacleEditor {
       button.addEventListener("click", () => this.usePreset(name));
       options.presets.appendChild(button);
     }
-    options.placeButton.addEventListener("click", () => {
+    options.saveButton.addEventListener("click", () => {
       if (this.error()) return;
-      this.options.onPlace(this.points.map((p) => [p[0], p[1]]), this.sizeMeters);
+      this.options.onSave(this.points.map((p) => [p[0], p[1]]), this.sizeMeters);
     });
     this.render();
   }
@@ -119,11 +121,11 @@ class ObstacleEditor {
     this.options.sizeValue.textContent = `${this.sizeMeters} m`;
     const problem = this.error();
     const ready = !problem;
-    this.options.placeButton.disabled = !ready;
+    this.options.saveButton.disabled = !ready;
     this.options.status.textContent = this.points.length === 0
       ? "Cliquez sur la grille pour poser les points, ou choisissez une forme."
       : ready
-        ? `${this.points.length} points${this.closed ? ", forme fermée" : ""} : prête à placer.`
+        ? `${this.points.length} points${this.closed ? ", forme fermée" : ""} : prête, sera enregistrée sous ${this.options.nextName()}.`
         : problem;
   }
 }

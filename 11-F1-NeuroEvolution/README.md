@@ -23,6 +23,9 @@ Le détail de chaque étape et l'architecture du projet sont dans [ARCHITECTURE.
 | 13 | Nouvelle règle de confiance : 100 %, puis 50 %, puis paliers selon le progrès entre les 2 générations précédentes | ✅ |
 | 14 | Rayons à des angles différents (un rayon = un neurone d'entrée) ; vitrine sans fiche technique | ✅ |
 | 15 | Menu épuré : lignées en piste en haut, puis uniquement des boutons ; garage dans la vitrine des voitures ; longueur des rayons dans l'éditeur de rayons | ✅ |
+| 16 | Vitrine des obstacles : obstacles de série, prototypes dessinés (`proto_1`, `proto_2`…), placement depuis la vitrine ou au hasard (types et nombres choisis) | ✅ |
+| 17 | Bouton en haut à droite : retirer le décor d'herbe (rendu plus léger) | à faire |
+| 18 | Flammes sur la ligne d'arrivée quand une voiture la franchit | à faire |
 
 ## Lancement
 
@@ -43,7 +46,7 @@ De haut en bas :
 3. **Réseau de neurones : 6 → 20 → 2** (ouvre `network.html`) et **Rayons : 5 · longueur 160 px** (ouvre l'éditeur de rayons).
 4. **Entraîner sur ce circuit**, **Arrêter**, **Parcours d'entraînement (5 niveaux)**.
 5. Vitesse de simulation **×1 … ×100, max**, **Rayons du leader : affichés / masqués**.
-6. **Dessiner un obstacle**, **Retirer un obstacle**, **Retirer tous les obstacles**.
+6. **Vitrine des obstacles**, **Obstacles au hasard**, **Retirer un obstacle**, **Retirer tous**.
 
 Pas d'autre texte dans le menu : les consignes (placer ou retirer un obstacle) et les messages courts s'affichent dans un bandeau en haut du circuit. Après une mise à jour des fichiers, recharger avec Ctrl+F5.
 
@@ -116,13 +119,21 @@ Progrès = meilleur % de la dernière génération − meilleur % de l'avant-der
 - **Télécharger le modèle** et **Repartir de zéro** apparaissent sur une voiture dès qu'elle est au garage ; **Charger un modèle (.json)** est en haut de la vitrine (voir « Modèles en fichier »).
 - **« Confiance par circuit »** ouvre un tableau de tous les circuits (F1 puis niveaux) : confiance de la voiture (100 % de départ si elle n'y a jamais roulé), meilleur pourcentage et état (« jamais entraînée ici », « en apprentissage », « voiture entraînée ✓ »).
 
-## Obstacles (`obstacle.js`, `obstacle-editor.js`)
+## Obstacles (`obstacle.js`, `obstacle-editor.js`, `obstacle-catalog.js`, `obstacle-placement.js`, `obstacle-showroom.js`)
 
 Boutons « obstacles » du menu :
 
-- **Dessiner un obstacle** ouvre l'éditeur : chaque clic sur la grille pose un sommet ; cliquer sur le premier point (jaune) ferme la forme. Formes toutes faites : pile de pneus, bloc, triangle, barrière. « Annuler le dernier point », « Effacer ». Curseur **Taille** : plus grande dimension de 2 à 20 m (même échelle que les voitures, 3,14 px/m).
-- La forme doit avoir de 3 à 24 points, des côtés qui ne se croisent pas et une surface non nulle ; sinon « Placer sur le circuit » reste grisé et la raison s'affiche.
-- **Placer sur le circuit** : l'obstacle suit le pointeur au-dessus du circuit ; un clic le pose, **R** le tourne de 15°, **Échap** annule.
+- **Vitrine des obstacles** : une carte par obstacle (forme, nom, taille en mètres, nombre de sommets).
+  - **Obstacles de série**, déjà dessinés : Pile de pneus (3 m), Bloc béton (4 m), Barrière (9 m), Cône géant (3 m), Chevron (7 m), Muret en L (7 m), Croix (5 m), Étoile (5 m), Losange (5 m).
+  - **Prototypes dessinés** : chaque dessin enregistré devient `proto_1`, `proto_2`… (le numéro n'est jamais réutilisé tant qu'un prototype plus récent existe ; 40 prototypes au plus). « Retirer de la vitrine » n'existe que pour eux. Ils sont mémorisés dans le navigateur.
+  - **Placer sur le circuit** : la vitrine se ferme, l'obstacle suit le pointeur au-dessus du circuit ; un clic le pose, **R** le tourne de 15°, **Échap** annule.
+- **+ Dessiner un prototype** (dans la vitrine) ouvre l'éditeur : chaque clic sur la grille pose un sommet ; cliquer sur le premier point (jaune) ferme la forme. Formes de départ : pile de pneus, bloc, triangle, barrière. « Annuler le dernier point », « Effacer ». Curseur **Taille** : plus grande dimension de 2 à 20 m (même échelle que les voitures, 3,14 px/m). La forme doit avoir de 3 à 24 points, des côtés qui ne se croisent pas et une surface non nulle ; sinon « Enregistrer dans la vitrine » reste grisé et la raison s'affiche. Enregistrer rouvre la vitrine sur le nouveau prototype.
+- **Obstacles au hasard** ouvre la vitrine en mode « Placer au hasard » (on peut aussi basculer entre les deux modes dans la vitrine) : un champ **Nombre** (0 à 10) par obstacle, le bouton indique le total (« Placer 9 obstacles au hasard », 30 au maximum). Les obstacles s'ajoutent à ceux déjà posés, avec une rotation au hasard, selon ces règles de scène (`obstacle-placement.js`) :
+  - centre sur la piste, jamais dans la zone de départ (12 longueurs de voiture après la ligne, 3 avant) ;
+  - un passage libre d'au moins 3 largeurs de voiture (≈ 6 m) à côté de chaque obstacle ;
+  - au moins 3 largeurs de voiture entre deux obstacles, et pas de débordement sur une autre portion du tracé ;
+  - 80 essais au plus par obstacle : s'il n'y a plus de place, il n'est pas posé et le bandeau l'indique (« 7 obstacle(s) sur 9 placé(s) »).
+  Les tirages utilisent le générateur à graine de la page ; les tests utilisent une graine fixe.
 - Effet : les côtés de l'obstacle sont des **murs pour les rayons** capteurs (les voitures le voient), et une voiture dont le centre arrive à moins d'une demi-largeur de l'obstacle est **éliminée** (règle de scène). Valable à l'entraînement, dans le parcours et en démonstration.
 - **Retirer un obstacle** : cliquer ensuite sur l'obstacle à retirer (le plus récent s'ils se chevauchent ; Échap annule). **Retirer tous les obstacles** vide le circuit actuel.
 - Les obstacles sont **mémorisés par circuit** dans le navigateur ; leur nombre s'affiche dans la vitrine des circuits.
@@ -225,7 +236,7 @@ Une configuration invalide est refusée avec un message (bandeau du circuit). `n
 
 ## Fichiers
 
-`vehicle.js` (base protégée), `car.js` (`Car extends Vehicle`), `network-config.js`, `neural-network.js`, `architecture.js`, `confidence.js`, `evolution.js`, `training-circuits-data.js`, `curriculum.js`, `garage.js`, `network.html` + `network-viewer.js`, `ray.js`, `ray-editor.js`, `sensor-settings.js`, `sim-speed.js`, `car-design.js`, `showroom.js`, `circuit-showroom.js`, `model-file.js`, `obstacle.js`, `obstacle-editor.js`, `circuit.js` (géométrie, `LapTracker`), `circuits-data.js`, `brands.js`, `random.js` (RNG à graine), `grass.js`, `track-renderer.js`, `sketch.js`.
+`vehicle.js` (base protégée), `car.js` (`Car extends Vehicle`), `network-config.js`, `neural-network.js`, `architecture.js`, `confidence.js`, `evolution.js`, `training-circuits-data.js`, `curriculum.js`, `garage.js`, `network.html` + `network-viewer.js`, `ray.js`, `ray-editor.js`, `sensor-settings.js`, `sim-speed.js`, `car-design.js`, `showroom.js`, `circuit-showroom.js`, `model-file.js`, `obstacle.js`, `obstacle-editor.js`, `obstacle-catalog.js`, `obstacle-placement.js`, `obstacle-showroom.js`, `circuit.js` (géométrie, `LapTracker`), `circuits-data.js`, `brands.js`, `random.js` (RNG à graine), `grass.js`, `track-renderer.js`, `sketch.js`.
 
 ## Tests
 
