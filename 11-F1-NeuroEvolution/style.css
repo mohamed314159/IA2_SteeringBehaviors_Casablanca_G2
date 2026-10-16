@@ -539,3 +539,25 @@ dialog button:disabled {
 #obstacleRandomBar[hidden] {
   display: none;
 }
+
+/* ---------- Bouton du décor, en haut à droite de l'écran (étape 17) ---------- */
+.decor-toggle {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 10;
+  padding: 6px 12px;
+  border: 2px solid #3c3f46;
+  background: #20232a;
+  color: #fff;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.decor-toggle[aria-pressed="true"] {
+  border-color: #ffd800;
+}
+
+.decor-toggle:focus-visible {
+  outline: 2px solid #ffd800;
+}

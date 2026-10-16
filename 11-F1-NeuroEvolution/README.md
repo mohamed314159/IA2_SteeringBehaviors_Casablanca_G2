@@ -24,8 +24,13 @@ Le détail de chaque étape et l'architecture du projet sont dans [ARCHITECTURE.
 | 14 | Rayons à des angles différents (un rayon = un neurone d'entrée) ; vitrine sans fiche technique | ✅ |
 | 15 | Menu épuré : lignées en piste en haut, puis uniquement des boutons ; garage dans la vitrine des voitures ; longueur des rayons dans l'éditeur de rayons | ✅ |
 | 16 | Vitrine des obstacles : obstacles de série, prototypes dessinés (`proto_1`, `proto_2`…), placement depuis la vitrine ou au hasard (types et nombres choisis) | ✅ |
-| 17 | Bouton en haut à droite : retirer le décor d'herbe (rendu plus léger) | à faire |
+| 17 | Bouton en haut à droite : retirer le décor d'herbe (rendu plus léger) | ✅ |
 | 18 | Flammes sur la ligne d'arrivée quand une voiture la franchit | à faire |
+| 19 | Circuits d'entraînement actuels plus petits : surface divisée par 4 | à faire |
+| 20 | 5 nouveaux circuits d'entraînement pour les bases de la course (drift à gauche, drift à droite…) | à faire |
+| 21 | Plus de circuits de Formule 1 | à faire |
+| 22 | Designs de voitures plus faciles à distinguer (deux voitures rouges de marques différentes se ressemblent trop) | à faire |
+| 23 | Longueur des rayons : plage bien plus grande que 300 px, maximum = largeur de l'écran | à faire |
 
 ## Lancement
 
@@ -47,6 +52,8 @@ De haut en bas :
 4. **Entraîner sur ce circuit**, **Arrêter**, **Parcours d'entraînement (5 niveaux)**.
 5. Vitesse de simulation **×1 … ×100, max**, **Rayons du leader : affichés / masqués**.
 6. **Vitrine des obstacles**, **Obstacles au hasard**, **Retirer un obstacle**, **Retirer tous**.
+
+En haut à droite de l'écran, hors du menu : **Décor : herbe / Décor : léger** (voir « Décor léger »).
 
 Pas d'autre texte dans le menu : les consignes (placer ou retirer un obstacle) et les messages courts s'affichent dans un bandeau en haut du circuit. Après une mise à jour des fichiers, recharger avec Ctrl+F5.
 
@@ -138,6 +145,17 @@ Boutons « obstacles » du menu :
 - **Retirer un obstacle** : cliquer ensuite sur l'obstacle à retirer (le plus récent s'ils se chevauchent ; Échap annule). **Retirer tous les obstacles** vide le circuit actuel.
 - Les obstacles sont **mémorisés par circuit** dans le navigateur ; leur nombre s'affiche dans la vitrine des circuits.
 - `Obstacle` étend `Vehicle` (entité immobile, sans locomotion), conformément aux consignes du dépôt.
+
+## Décor léger (`decor.js`)
+
+Le bouton **Décor : herbe / Décor : léger**, en haut à droite de l'écran, bascule entre les deux décors. Le choix est mémorisé dans le navigateur ; l'entraînement en cours continue (seul le décor est redessiné).
+
+- **Herbe** : texture façon Minecraft (`grass.js`), environ 100 000 petits carrés dessinés une fois à chaque construction du circuit.
+- **Léger** : fond vert uni (`LIGHT_BACKGROUND`) et **densité de pixels 1** pour le canevas et le décor. La piste (asphalte, bords, vibreurs, ligne de départ) reste identique.
+
+Ce que le mode léger allège, en pratique (rendu Canvas 2D de p5, donc surtout le processeur ; la recopie d'image peut être accélérée par la carte graphique) :
+- **Construction du décor** (au chargement, changement de circuit, parcours d'entraînement) : mesurée à 871 ms avec l'herbe contre 14 ms en mode léger.
+- **Chaque image** : le décor est déjà pré-rendu et simplement recopié, l'herbe ne coûte donc rien de plus à densité égale. Le gain par image vient de la densité de pixels 1 sur un écran haute résolution (Windows à 125 % ou 150 %, écran Retina) : 1,56 à 4 fois moins de pixels. Sur un écran à 100 %, il n'y a pas de gain par image.
 
 ## Modèles en fichier (`model-file.js`)
 
@@ -236,7 +254,7 @@ Une configuration invalide est refusée avec un message (bandeau du circuit). `n
 
 ## Fichiers
 
-`vehicle.js` (base protégée), `car.js` (`Car extends Vehicle`), `network-config.js`, `neural-network.js`, `architecture.js`, `confidence.js`, `evolution.js`, `training-circuits-data.js`, `curriculum.js`, `garage.js`, `network.html` + `network-viewer.js`, `ray.js`, `ray-editor.js`, `sensor-settings.js`, `sim-speed.js`, `car-design.js`, `showroom.js`, `circuit-showroom.js`, `model-file.js`, `obstacle.js`, `obstacle-editor.js`, `obstacle-catalog.js`, `obstacle-placement.js`, `obstacle-showroom.js`, `circuit.js` (géométrie, `LapTracker`), `circuits-data.js`, `brands.js`, `random.js` (RNG à graine), `grass.js`, `track-renderer.js`, `sketch.js`.
+`vehicle.js` (base protégée), `car.js` (`Car extends Vehicle`), `network-config.js`, `neural-network.js`, `architecture.js`, `confidence.js`, `evolution.js`, `training-circuits-data.js`, `curriculum.js`, `garage.js`, `network.html` + `network-viewer.js`, `ray.js`, `ray-editor.js`, `sensor-settings.js`, `sim-speed.js`, `car-design.js`, `showroom.js`, `circuit-showroom.js`, `model-file.js`, `obstacle.js`, `obstacle-editor.js`, `obstacle-catalog.js`, `obstacle-placement.js`, `obstacle-showroom.js`, `circuit.js` (géométrie, `LapTracker`), `circuits-data.js`, `brands.js`, `random.js` (RNG à graine), `grass.js`, `decor.js`, `track-renderer.js`, `sketch.js`.
 
 ## Tests
 

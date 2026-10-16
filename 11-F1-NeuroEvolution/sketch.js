@@ -24,6 +24,7 @@ let circuitKey = "monza";
 let ui = {};
 let showroom;                      // vitrine des voitures (showroom.js)
 let circuitShowroom;               // vitrine des circuits (circuit-showroom.js)
+let decor = DECOR_GRASS;           // décor du circuit (decor.js) : herbe ou léger
 let speedFactor = 1;               // accélération choisie (sim-speed.js) : 1, 2, 5… ou "max"
 let obstacles = [];                // obstacles du circuit affiché (obstacle.js)
 let obstacleWallList = [];         // leurs côtés, vus comme des murs par les rayons
@@ -45,6 +46,8 @@ function setup() {
   useStoredArchitecture(safeLocalStorage());
   loadRayLength(safeLocalStorage());
   speedFactor = loadSpeedFactor(safeLocalStorage());
+  decor = loadDecor(safeLocalStorage());
+  pixelDensity(decorPixelDensity(decor, displayDensity()));
   garage = new Garage(safeLocalStorage());
   removeIncompatibleLineages();
   bindMenu();
@@ -85,6 +88,7 @@ function bindMenu() {
   bindRayEditor();
   bindRayLength();
   bindSpeedButtons();
+  bindDecorButton();
   ui.raysToggle.addEventListener("click", () => {
     showRays = !showRays;
     ui.raysToggle.setAttribute("aria-pressed", String(showRays));
@@ -94,6 +98,34 @@ function bindMenu() {
   ui.stopButton.addEventListener("click", stopTraining);
   ui.curriculumButton.addEventListener("click", startCurriculum);
   updateButtons();
+}
+
+// Bouton en haut à droite de l'écran : herbe texturée ↔ décor léger (fond uni,
+// densité de pixels 1). Seul le décor est redessiné : l'entraînement continue.
+function bindDecorButton() {
+  ui.decorButton = document.getElementById("decorButton");
+  showDecorButton();
+  ui.decorButton.addEventListener("click", () => {
+    decor = toggledDecor(decor);
+    saveDecor(safeLocalStorage(), decor);
+    pixelDensity(decorPixelDensity(decor, displayDensity()));
+    buildTrackLayer();
+    showDecorButton();
+    notify(decor === DECOR_LIGHT ? "Décor léger : fond uni, densité de pixels 1." : "Décor : herbe.");
+  });
+}
+
+function showDecorButton() {
+  ui.decorButton.textContent = decorButtonLabel(decor);
+  ui.decorButton.setAttribute("aria-pressed", String(decor === DECOR_LIGHT));
+}
+
+// Décor pré-rendu du circuit actuel (une seule fois, pas à chaque image).
+function buildTrackLayer() {
+  if (trackLayer) trackLayer.remove();
+  trackLayer = createGraphics(CANVAS_WIDTH, CANVAS_HEIGHT);
+  trackLayer.pixelDensity(decorPixelDensity(decor, displayDensity()));
+  drawTrackLayer(trackLayer, circuit, createRng(42), decor);
 }
 
 // Longueur des rayons : curseur (réagit pendant le glissement), boutons − / +
@@ -227,6 +259,7 @@ function onStorageChange(event) {
     obstacles = loadObstacles(safeLocalStorage(), circuitKey);
     refreshObstacles(false);
   }
+  if (event.key === DECOR_STORAGE_KEY && loadDecor(safeLocalStorage()) !== decor) ui.decorButton.click();
   if (event.key === SIM_SPEED_STORAGE_KEY) {
     speedFactor = loadSpeedFactor(safeLocalStorage());
     showSpeedFactor();
@@ -333,9 +366,7 @@ function buildCircuit(key) {
     canvasWidth: CANVAS_WIDTH, canvasHeight: CANVAS_HEIGHT, trackWidth: TRACK_WIDTH,
     pixelsPerMeter: TRACK_WIDTH / F1_TRACK_WIDTH_M
   });
-  if (trackLayer) trackLayer.remove();
-  trackLayer = createGraphics(CANVAS_WIDTH, CANVAS_HEIGHT);
-  drawTrackLayer(trackLayer, circuit, createRng(42));
+  buildTrackLayer();
   placing = null;
   removingObstacle = false;
   obstacles = loadObstacles(safeLocalStorage(), key);

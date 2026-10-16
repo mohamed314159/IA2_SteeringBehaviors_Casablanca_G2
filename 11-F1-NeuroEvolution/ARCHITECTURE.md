@@ -24,8 +24,13 @@ Règle de mise à jour : chaque nouvelle demande est ajoutée à la pile sous la
 | 14 | Rayons à des angles différents (un rayon = un neurone d'entrée) ; vitrine sans fiche technique | **DONE** |
 | 15 | Menu épuré : lignées en haut, uniquement des boutons ; garage dans la vitrine des voitures ; longueur des rayons dans l'éditeur de rayons | **DONE** |
 | 16 | Vitrine des obstacles : obstacles dessinés enregistrés comme prototypes (`proto_1`, `proto_2`…), obstacles de série déjà dessinés, placement depuis la vitrine, placement aléatoire (types et nombres choisis dans la vitrine) | **DONE** |
-| 17 | Bouton en haut à droite de l'écran : retirer le décor d'herbe pour un rendu plus léger | à faire |
+| 17 | Bouton en haut à droite de l'écran : retirer le décor d'herbe pour un rendu plus léger | **DONE** |
 | 18 | Effet de flammes sur la ligne d'arrivée quand une voiture la franchit | à faire |
+| 19 | Circuits d'entraînement actuels plus petits : surface divisée par 4 | à faire |
+| 20 | 5 nouveaux circuits d'entraînement pour les bases de la course (drift à gauche, drift à droite…) | à faire |
+| 21 | Plus de circuits de Formule 1 | à faire |
+| 22 | Designs de voitures plus faciles à distinguer (deux voitures rouges de marques différentes se ressemblent trop) | à faire |
+| 23 | Longueur des rayons : plage bien plus grande que 300 px, maximum = largeur de l'écran | à faire |
 
 ### Étape 1 – Circuit, décor, marques, rayons — **DONE**
 - Trois circuits F1 stylisés (Monza, Spa, Interlagos) lissés par Catmull-Rom ; bords sans croisement vérifiés par les tests.
@@ -116,8 +121,10 @@ Règle de mise à jour : chaque nouvelle demande est ajoutée à la pile sous la
 - L'éditeur n'envoie plus la forme directement sur le circuit : « Enregistrer dans la vitrine » crée le prototype (forme normalisée + taille en mètres, mémorisée).
 - Mode « Placer au hasard » : nombre par obstacle (0 à 10, total ≤ 30) ; placement en essais bornés, hors zone de départ, passage libre ≥ 3 largeurs de voiture, écart ≥ 3 largeurs entre obstacles, sans déborder sur une autre portion du tracé ; les obstacles impossibles à placer sont comptés et signalés.
 
-### Étape 17 – Décor léger — à faire
-- Bouton en haut à droite de l'écran qui retire le décor d'herbe pour un rendu plus léger.
+### Étape 17 – Décor léger — **DONE**
+- Bouton « Décor : herbe / Décor : léger » fixé en haut à droite de l'écran (hors du menu), état mémorisé.
+- Mode léger : fond uni au lieu de l'herbe texturée et densité de pixels 1 (canevas + décor) ; la piste est identique.
+- Seul le décor pré-rendu est reconstruit (`buildTrackLayer`) : l'entraînement continue. Construction mesurée : 871 ms (herbe) → 14 ms (léger) ; par image, le gain dépend de la densité de l'écran.
 
 ### Étape 18 – Flammes sur la ligne d'arrivée — à faire
 - Effet de flammes sur la ligne d'arrivée lorsqu'une voiture la franchit.
@@ -152,6 +159,7 @@ Règles de course (scène) : sortie de piste, immobilité, tours  (Car.applyRace
 | `circuit.js` | Géométrie : ligne médiane, bords, grille spatiale, projection, `LapTracker` |
 | `circuits-data.js` / `training-circuits-data.js` | Tracés F1 / niveaux d'entraînement |
 | `track-renderer.js`, `grass.js` | Décor statique dessiné une seule fois |
+| `decor.js` | Décor herbe ou léger (fond uni, densité de pixels 1), mémorisé |
 | `brands.js` | Marques, modèles (livrée, numéro), tirage et mutation des paramètres |
 | `car-design.js` | Dessin de la voiture : simple sur le circuit, détaillé dans la vitrine |
 | `showroom.js` | Vitrine : sélection des voitures, menu « Confiance par circuit » |
@@ -193,6 +201,7 @@ Règles de course (scène) : sortie de piste, immobilité, tours  (Car.applyRace
 | `f1-neuroevolution-ray-length-v1` | Longueur des rayons |
 | `f1-neuroevolution-sim-speed-v1` | Vitesse de simulation choisie |
 | `f1-neuroevolution-obstacles-v1` | Obstacles posés, par circuit |
+| `f1-neuroevolution-decor-v1` | Décor choisi : `grass` ou `light` |
 | `f1-neuroevolution-obstacle-protos-v1` | Prototypes d'obstacles dessinés (`proto_N`, forme normalisée, taille en mètres) |
 
 ## 6. Tests et livraison
