@@ -31,6 +31,7 @@ Règle de mise à jour : chaque nouvelle demande est ajoutée à la pile sous la
 | 21 | Plus de circuits de Formule 1 | **DONE** |
 | 22 | Designs de voitures plus faciles à distinguer (deux voitures rouges de marques différentes se ressemblent trop) | **DONE** |
 | 23 | Longueur des rayons : plage bien plus grande que 300 px, maximum = largeur de l'écran | **DONE** |
+| 24 | Bouton vert renommé « Déploiement » et agrandi ; tailles des boutons du menu harmonisées | **DONE** |
 
 ### Étape 1 – Circuit, décor, marques, rayons — **DONE**
 - Trois circuits F1 stylisés (Monza, Spa, Interlagos) lissés par Catmull-Rom ; bords sans croisement vérifiés par les tests.
@@ -151,6 +152,10 @@ Règle de mise à jour : chaque nouvelle demande est ajoutée à la pile sous la
 ### Étape 23 – Rayons jusqu'à la largeur de l'écran — **DONE**
 - `sensor-settings.js` : maximum variable (`setMaxRayLength(screen.width)`, repli 1 200 px = largeur du canvas, jamais sous 160 px), longueur ramenée dans la plage ; bouton « Largeur de l'écran » dans l'éditeur de rayons.
 - `Circuit.wallsNear` bornée aux cases occupées de la grille, et liste complète des murs quand le rayon couvre tout (mêmes murs qu'avant, testé).
+
+### Étape 24 – Bouton « Déploiement » et boutons harmonisés — **DONE**
+- Le bouton du parcours d'entraînement s'appelle « Déploiement » (nombre de niveaux en petit dessous) : 21 px, 64 px de haut, dégradé vert et ombre.
+- Boutons ordinaires du menu : `box-sizing: border-box`, hauteur minimale commune de 42 px, libellé centré ; vitesses en grille de 4 colonnes ; espacement entre les groupes.
 
 ## 2. Modèle (Reynolds)
 

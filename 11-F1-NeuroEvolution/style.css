@@ -561,3 +561,79 @@ dialog button:disabled {
 .decor-toggle:focus-visible {
   outline: 2px solid #ffd800;
 }
+
+/* ---------- Boutons du menu harmonisés (étape 24) ---------- */
+/* Même hauteur minimale pour tous : un libellé sur une ou deux lignes reste aligné. */
+#menu .menu-buttons button,
+#menu .menu-buttons .button-like {
+  box-sizing: border-box;
+  min-height: 42px;   /* = deux lignes de libellé : tous les boutons ont la même hauteur */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 8px;
+  font-size: 12.5px;
+  line-height: 1.2;
+  border-radius: 4px;
+}
+
+#menu .menu-buttons .buttons {
+  gap: 6px;
+}
+
+/* Un peu d'air entre les groupes : choix, entraînement, réglages, obstacles. */
+#menu .menu-buttons #networkLink,
+#menu .menu-buttons #speedButtons {
+  margin-top: 6px;
+}
+
+#menu .menu-buttons .buttons:has(#trainButton),
+#menu .menu-buttons .buttons:has(#obstacleShowroomButton) {
+  margin-top: 6px;
+}
+
+/* Vitesses : grille régulière de 4 colonnes. */
+#menu .speed-buttons {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+}
+
+#menu .menu-buttons .speed-buttons button.small {
+  min-height: 28px;
+  width: 100%;
+  margin: 0;
+  padding: 3px 0;
+  font-size: 12px;
+}
+
+/* Déploiement : le bouton le plus important, en grand. */
+#menu .menu-buttons button.deploy {
+  min-height: 64px;
+  margin: 4px 0;
+  padding: 10px 8px;
+  font-size: 21px;
+  letter-spacing: 0.5px;
+  background: linear-gradient(180deg, #3a9b3f, #23692a);
+  border: 2px solid #5fd068;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.45);
+}
+
+#menu .menu-buttons button.deploy small {
+  margin-top: 3px;
+  font-size: 11px;
+  font-weight: normal;
+  letter-spacing: 0;
+  opacity: 0.9;
+}
+
+#menu .menu-buttons button.deploy:hover:not(:disabled) {
+  filter: brightness(1.12);
+}
+
+#menu .menu-buttons button.deploy:disabled {
+  background: #6b6b6b;
+  border-color: #858585;
+  box-shadow: none;
+}

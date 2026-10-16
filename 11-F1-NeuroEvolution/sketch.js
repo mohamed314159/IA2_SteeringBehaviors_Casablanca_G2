@@ -98,9 +98,14 @@ function bindMenu() {
   });
   ui.trainButton.addEventListener("click", startTraining);
   ui.stopButton.addEventListener("click", stopTraining);
-  ui.curriculumButton.textContent = `Parcours d'entraînement (${trainingLevelKeys().length} niveaux)`;
+  // Bouton principal : « Déploiement » (parcours de tous les niveaux d'entraînement).
+  ui.curriculumButton.innerHTML = deployButtonHtml(trainingLevelKeys().length);
   ui.curriculumButton.addEventListener("click", startCurriculum);
   updateButtons();
+}
+
+function deployButtonHtml(levelCount) {
+  return `Déploiement<small>parcours de ${levelCount} niveaux d'entraînement</small>`;
 }
 
 // Bouton en haut à droite de l'écran : herbe texturée ↔ décor léger (fond uni,

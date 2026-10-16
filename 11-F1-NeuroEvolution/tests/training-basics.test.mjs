@@ -110,7 +110,7 @@ test("haricot : surtout à droite, mais une vraie part de virage à gauche (les 
   assert.ok(turnSummary(build("niveau-1-circulaire")).leftShare < 0.02);
 });
 
-test("une voiture part sur chaque nouveau niveau ; le parcours compte 10 niveaux (libellé du bouton)", () => {
+test("une voiture part sur chaque nouveau niveau ; le parcours (bouton Déploiement) compte 10 niveaux", () => {
   const spec = { brand: "Ferraaa", model: "F40o", maxSpeed: 4.5, maxForce: 0.22 };
   const straight = { inputNodes: 6, predict: () => [0.5, 0.6] };
   for (const key of BASICS) {
@@ -122,7 +122,7 @@ test("une voiture part sur chaque nouveau niveau ; le parcours compte 10 niveaux
   const curriculum = new ex.Curriculum(ex.trainingLevelKeys(), ["Ferraaa F40o"]);
   assert.equal(curriculum.levelKeys.length, 10);
   const html = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
-  assert.ok(html.includes("Parcours d'entraînement (10 niveaux)"));
+  assert.ok(html.includes(">Déploiement</button>"));
   const sketch = fs.readFileSync(new URL("../sketch.js", import.meta.url), "utf8");
-  assert.ok(sketch.includes("Parcours d'entraînement (${trainingLevelKeys().length} niveaux)"), "libellé calculé");
+  assert.ok(sketch.includes("deployButtonHtml(trainingLevelKeys().length)"), "nombre de niveaux calculé");
 });
