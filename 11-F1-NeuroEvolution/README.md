@@ -29,7 +29,7 @@ Le détail de chaque étape et l'architecture du projet sont dans [ARCHITECTURE.
 | 19 | Circuits d'entraînement actuels plus petits : surface divisée par 4 | ✅ |
 | 20 | 5 nouveaux circuits d'entraînement pour les bases de la course (drift à gauche, drift à droite…) | ✅ |
 | 21 | Plus de circuits de Formule 1 (8 au total), épingles très serrées | ✅ |
-| 22 | Designs de voitures plus faciles à distinguer (deux voitures rouges de marques différentes se ressemblent trop) | à faire |
+| 22 | Designs de voitures plus faciles à distinguer (deux voitures rouges de marques différentes se ressemblent trop) | ✅ |
 | 23 | Longueur des rayons : plage bien plus grande que 300 px, maximum = largeur de l'écran | à faire |
 
 ## Lancement
@@ -122,6 +122,9 @@ Progrès = meilleur % de la dernière génération − meilleur % de l'avant-der
 
 - **Aucune voiture n'est sélectionnée au départ.** Le bouton **Voitures : …** ouvre la vitrine et indique « aucune sélectionnée », « 1 sélectionnée », « 3 sélectionnées »… « Entraîner » et le parcours restent grisés tant que rien n'est choisi.
 - Chaque modèle est dessiné en grand (220 px de long, environ 12 fois la taille sur le circuit) avec plus de détails : jantes, suspensions, pointe du nez, livrée propre au modèle (bande, double bande, flèche, damier, unie), entrées d'air, rétroviseurs, casque, halo et numéro. Le même dessin, simplifié, sert sur le circuit.
+- **Une couleur par modèle (étape 22)** : chaque modèle a sa propre couleur, et non plus celle de sa marque (les deux rouges de Tiyoti et Ferraaa se confondaient, avec un écart de couleur ΔE ≈ 18,6). Les 11 couleurs sont blanc (Supraa GT), noir (Corolo Sprint), rouge (F40o), bordeaux (Testarosso), jaune (Huracano), vert (Aventadoro), turquoise (Flecha W15), orange (MCL Papaya), gris (911 Turbu), bleu nuit (Chirone) et rose (A110 Rally). Les tests imposent un écart perçu d'au moins ΔE 30 (CIE Lab) entre deux modèles ; le plus petit écart actuel est de 34,7.
+- La couleur ne porte pas seule l'information : le numéro et la livrée de chaque modèle restent distincts. Sur le circuit, la voiture simplifiée montre désormais aussi le motif de sa livrée, avec un contour contrasté (sombre sur une carrosserie claire, clair sur une sombre) pour que la voiture noire reste visible sur l'asphalte.
+- Une voiture sauvegardée au garage avant l'étape 22 est dessinée avec la nouvelle couleur de son modèle (`carAppearance`) ; sa fiche n'est pas modifiée.
 - Sous le dessin : la marque, le modèle et l'état au garage (pas de fiche technique).
 - « Sélectionner » / « Sélectionnée ✓ » ajoute ou retire la voiture de l'entraînement.
 - **Télécharger le modèle** et **Repartir de zéro** apparaissent sur une voiture dès qu'elle est au garage ; **Charger un modèle (.json)** est en haut de la vitrine (voir « Modèles en fichier »).

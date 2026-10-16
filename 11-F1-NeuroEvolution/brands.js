@@ -1,5 +1,7 @@
 // Marques et modèles parodiques (noms volontairement déformés).
-// Chaque modèle a sa livrée (motif dessiné dans car-design.js) et son numéro.
+// Chaque modèle a sa livrée (motif dessiné dans car-design.js), son numéro et
+// sa propre couleur (étape 22) : deux modèles, même de marques différentes, ne
+// partagent jamais une couleur proche (écart vérifié par les tests).
 // Chaque modèle définit des plages de paramètres ; chaque voiture lâchée tire
 // ses valeurs au hasard dans ces plages.
 //   speed : vitesse max (px/image ; 4,7 px/image ≈ 90 m/s à 60 images/s)
@@ -9,22 +11,22 @@ const CAR_BRANDS = [
   {
     name: "Tiyoti", color: "#d81e2a", accent: "#ffffff",
     models: [
-      { name: "Supraa GT", livery: "bande", number: 7, speed: [3.8, 4.4], grip: [0.22, 0.30] },
-      { name: "Corolo Sprint", livery: "double-bande", number: 12, speed: [3.4, 3.9], grip: [0.26, 0.34] }
+      { name: "Supraa GT", color: "#f4f4f4", accent: "#d81e2a", livery: "bande", number: 7, speed: [3.8, 4.4], grip: [0.22, 0.30] },
+      { name: "Corolo Sprint", color: "#1b1b1b", accent: "#d81e2a", livery: "double-bande", number: 12, speed: [3.4, 3.9], grip: [0.26, 0.34] }
     ]
   },
   {
     name: "Ferraaa", color: "#e10600", accent: "#ffd800",
     models: [
-      { name: "F40o", livery: "unie", number: 16, speed: [4.4, 5.0], grip: [0.18, 0.25] },
-      { name: "Testarosso", livery: "bande", number: 55, speed: [4.1, 4.7], grip: [0.20, 0.27] }
+      { name: "F40o", color: "#e10600", accent: "#ffd800", livery: "unie", number: 16, speed: [4.4, 5.0], grip: [0.18, 0.25] },
+      { name: "Testarosso", color: "#6b0f2a", accent: "#ffd800", livery: "bande", number: 55, speed: [4.1, 4.7], grip: [0.20, 0.27] }
     ]
   },
   {
     name: "Limbargana", color: "#f5b800", accent: "#1b1b1b",
     models: [
-      { name: "Huracano", livery: "flèche", number: 63, speed: [4.3, 4.9], grip: [0.19, 0.26] },
-      { name: "Aventadoro", livery: "damier", number: 88, speed: [4.6, 5.2], grip: [0.16, 0.22] }
+      { name: "Huracano", color: "#f5d000", accent: "#1b1b1b", livery: "flèche", number: 63, speed: [4.3, 4.9], grip: [0.19, 0.26] },
+      { name: "Aventadoro", color: "#7ed321", accent: "#1b1b1b", livery: "damier", number: 88, speed: [4.6, 5.2], grip: [0.16, 0.22] }
     ]
   },
   {
@@ -42,7 +44,7 @@ const CAR_BRANDS = [
   {
     name: "Porshe", color: "#f2f2f2", accent: "#b12b28",
     models: [
-      { name: "911 Turbu", livery: "bande", number: 11, speed: [4.0, 4.6], grip: [0.23, 0.31] }
+      { name: "911 Turbu", color: "#8e959c", accent: "#b12b28", livery: "bande", number: 11, speed: [4.0, 4.6], grip: [0.23, 0.31] }
     ]
   },
   {
@@ -54,7 +56,7 @@ const CAR_BRANDS = [
   {
     name: "Alpinne", color: "#2173b8", accent: "#ff87bc",
     models: [
-      { name: "A110 Rally", livery: "unie", number: 10, speed: [3.7, 4.3], grip: [0.25, 0.33] }
+      { name: "A110 Rally", color: "#ff5fa2", accent: "#2173b8", livery: "unie", number: 10, speed: [3.7, 4.3], grip: [0.25, 0.33] }
     ]
   }
 ];
@@ -66,14 +68,30 @@ function findModel(brandName, modelName) {
   return { brand, model };
 }
 
+// Apparence d'un modèle : sa couleur propre, sinon celle de la marque.
+function modelAppearance(brand, model) {
+  return { color: model.color ?? brand.color, accent: model.accent ?? brand.accent, livery: model.livery, number: model.number };
+}
+
+// Apparence à dessiner pour une voiture : celle du modèle actuel (une voiture
+// sauvegardée avant l'étape 22 prend ainsi la nouvelle couleur), sinon celle
+// enregistrée dans sa fiche (modèle inconnu).
+function carAppearance(spec) {
+  const brand = CAR_BRANDS.find((b) => b.name === spec.brand);
+  const model = brand ? brand.models.find((m) => m.name === spec.model) : null;
+  if (model) return modelAppearance(brand, model);
+  return { color: spec.color, accent: spec.accent, livery: spec.livery, number: spec.number };
+}
+
 // Paramètres tirés au hasard dans les plages d'un modèle donné (rng injectable).
 function createRandomSpecForModel(brandName, modelName, rng) {
   const { brand, model } = findModel(brandName, modelName);
+  const look = modelAppearance(brand, model);
   return {
     brand: brand.name,
     model: model.name,
-    color: brand.color,
-    accent: brand.accent,
+    color: look.color,
+    accent: look.accent,
     livery: model.livery,
     number: model.number,
     maxSpeed: randomBetween(rng, model.speed[0], model.speed[1]),

@@ -29,7 +29,7 @@ Règle de mise à jour : chaque nouvelle demande est ajoutée à la pile sous la
 | 19 | Circuits d'entraînement actuels plus petits : surface divisée par 4 | **DONE** |
 | 20 | 5 nouveaux circuits d'entraînement pour les bases de la course (drift à gauche, drift à droite…) | **DONE** |
 | 21 | Plus de circuits de Formule 1 | **DONE** |
-| 22 | Designs de voitures plus faciles à distinguer (deux voitures rouges de marques différentes se ressemblent trop) | à faire |
+| 22 | Designs de voitures plus faciles à distinguer (deux voitures rouges de marques différentes se ressemblent trop) | **DONE** |
 | 23 | Longueur des rayons : plage bien plus grande que 300 px, maximum = largeur de l'écran | à faire |
 
 ### Étape 1 – Circuit, décor, marques, rayons — **DONE**
@@ -143,6 +143,10 @@ Règle de mise à jour : chaque nouvelle demande est ajoutée à la pile sous la
 ### Étape 21 – Plus de circuits F1, épingles très serrées — **DONE**
 - 5 circuits stylisés ajoutés : Silverstone, Monaco, Montréal, Red Bull Ring, Hungaroring (8 au total).
 - Demande : des virages « encore plus serrés » que la demi-largeur de piste. `removeEdgeLoops` (`circuit.js`) coupe la boucle du bord intérieur au point de croisement (même nombre de points, murs de longueur nulle ignorés par les rayons) ; recherche limitée à π × largeur de piste ; `hasSelfIntersection` ignore deux segments qui se touchent au point de coupe. Bords des circuits existants inchangés (testé).
+
+### Étape 22 – Voitures faciles à distinguer — **DONE**
+- `brands.js` : couleur et accent propres à chaque modèle (`modelAppearance`), écart ΔE ≥ 30 entre deux modèles (testé) ; `carAppearance(spec)` relit l'apparence actuelle du modèle (voitures sauvegardées avant l'étape comprises).
+- `car-design.js` : sur le circuit, contour contrasté (`outlineColor`, luminance relative) et motif de la livrée ; pastilles de couleur du menu et de la vitrine alignées sur la couleur du modèle.
 
 ## 2. Modèle (Reynolds)
 

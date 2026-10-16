@@ -94,7 +94,7 @@ class Showroom {
     g.line(0, 6, g.width, 6);
     g.line(0, g.height - 6, g.width, g.height - 6);
     g.translate(g.width / 2, g.height / 2);
-    const spec = { color: brandData.color, accent: brandData.accent, livery: modelData.livery, number: modelData.number };
+    const spec = modelAppearance(brandData, modelData);
     const length = SHOWROOM_CAR_LENGTH;
     drawCarDesign(g, spec, length, length * F1_CAR_WIDTH_M / F1_CAR_LENGTH_M, { detailed: true });
     g.elt.style.display = "block";
@@ -102,7 +102,7 @@ class Showroom {
     g.elt.setAttribute("aria-label", `${entry.brand} ${entry.model} vue de dessus`);
 
     const title = document.createElement("h3");
-    title.innerHTML = `<span class="swatch" style="background:${brandData.color}"></span>${entry.brand} <span class="model-name">${entry.model}</span>`;
+    title.innerHTML = `<span class="swatch" style="background:${spec.color}"></span>${entry.brand} <span class="model-name">${entry.model}</span>`;
 
     const status = document.createElement("p");
     status.className = "status";

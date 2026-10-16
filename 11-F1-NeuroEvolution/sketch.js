@@ -624,7 +624,7 @@ function summaryHtml() {
 function updatePanel() {
   ui.summary.innerHTML = summaryHtml();
   if (demo) {
-    ui.lineages.innerHTML = cars.map((car) => `<li><span class="swatch" style="background:${car.spec.color}"></span>` +
+    ui.lineages.innerHTML = cars.map((car) => `<li><span class="swatch" style="background:${carAppearance(car.spec).color}"></span>` +
       `<strong>${car.spec.brand}</strong> ${car.spec.model} · gén. ${car.generation} – ${DEMO_CAPTION}` +
       `<br><small>${formatProgress(carFitness(car))}</small></li>`).join("");
     return;
@@ -640,7 +640,7 @@ function updatePanel() {
     const recordText = record && record.bestGeneration !== null
       ? `record sur ce circuit : ${formatProgress(record.bestProgress)} en ${(record.bestFrames / 60).toFixed(1)} s (gén. ${record.bestGeneration})`
       : "pas encore de record sur ce circuit";
-    rows.push(`<li><span class="swatch" style="background:${best.spec.color}"></span>` +
+    rows.push(`<li><span class="swatch" style="background:${carAppearance(best.spec).color}"></span>` +
       `<strong>${best.spec.brand}</strong> ${best.spec.model} · gén. ${best.generation}` +
       `<br><small>en piste : ${group.filter((c) => c.racing).length}/${group.length} · ${formatProgress(carFitness(best))} · survie ${best.secondsAlive.toFixed(1)} s</small>` +
       `<br><small>${formatConfidence(best)}</small>` +
@@ -660,7 +660,7 @@ function circuitPercentagesHtml() {
   return keys.map((key) => {
     const latest = garage.snapshot(key);
     const record = garage.circuitRecord(key, circuitKey);
-    const head = `<span class="swatch" style="background:${latest.spec.color}"></span><strong>${latest.spec.brand}</strong> ${latest.spec.model}`;
+    const head = `<span class="swatch" style="background:${carAppearance(latest.spec).color}"></span><strong>${latest.spec.brand}</strong> ${latest.spec.model}`;
     if (!record) return `<li>${head}<br><small>${circuit.name} : 0.0 % (jamais entraînée ici)</small></li>`;
     const trained = record.trained
       ? `<br><small class="saved-tag">voiture entraînée dans le circuit ${circuit.name} ✓ (gén. ${record.trained.generation})</small>`

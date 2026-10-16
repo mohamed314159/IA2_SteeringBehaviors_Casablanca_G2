@@ -2,13 +2,36 @@
 // Utilisé sur le circuit (petit, version simple) et dans la vitrine (grand,
 // version détaillée). `g` est la cible de dessin : p5.instance pour le canvas
 // principal, ou un p5.Graphics pour la vitrine.
-//   spec    : { color, accent, livery, number }
+//   spec    : { brand, model } (apparence lue dans brands.js, carAppearance),
+//             ou directement { color, accent, livery, number }
 //   L, W    : longueur et largeur de la voiture (px)
 //   options : { dead, detailed }
 const LIVERIES = ["bande", "double-bande", "unie", "flèche", "damier"];
 
+// Couleur de contour lisible sur la carrosserie : sombre sur une couleur claire,
+// claire sur une couleur sombre (luminance relative, seuil 0,4). Retourne [r, g, b].
+function hexToRgb(hex) {
+  const value = /^#?([0-9a-f]{6})$/i.exec(String(hex));
+  if (!value) return [128, 128, 128];
+  const n = parseInt(value[1], 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+function relativeLuminance(hex) {
+  const [r, g, b] = hexToRgb(hex).map((c) => {
+    const s = c / 255;
+    return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+function outlineColor(hex) {
+  return relativeLuminance(hex) > 0.4 ? [20, 20, 20] : [240, 240, 240];
+}
+
 function drawCarDesign(g, spec, L, W, options = {}) {
   const { dead = false, detailed = false } = options;
+  if (spec.brand && spec.model) spec = { ...spec, ...carAppearance(spec) };
   const alpha = dead ? 110 : 255;
   const body = g.color(spec.color);
   body.setAlpha(alpha);
@@ -48,10 +71,17 @@ function drawCarDesign(g, spec, L, W, options = {}) {
   g.rect(L * 0.47, 0, L * 0.08, W * 1.1, detailed ? 2 : 0);
   g.rect(-L * 0.47, 0, L * 0.08, W * 0.9, detailed ? 2 : 0);
 
-  // Coque : nez effilé + pontons latéraux.
+  // Coque : nez effilé + pontons latéraux. Sur le circuit, contour contrasté
+  // (une voiture noire reste visible sur l'asphalte) et motif de la livrée.
   g.fill(body);
+  if (!detailed) {
+    g.stroke(...outlineColor(spec.color), alpha);
+    g.strokeWeight(0.8);
+  }
   g.rect(0, 0, L * 0.85, W * 0.45, 2);
   g.rect(-L * 0.08, 0, L * 0.38, W * 0.8, 2);
+  g.noStroke();
+  if (!detailed) drawLivery(g, spec.livery, accent, L, W);
   if (detailed) {
     g.triangle(L * 0.43, -W * 0.08, L * 0.43, W * 0.08, L * 0.5, 0); // pointe du nez
     drawLivery(g, spec.livery, accent, L, W);

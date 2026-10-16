@@ -18,7 +18,7 @@ test("createRandomCarSpec : paramètres tirés dans les plages du modèle", () =
     const model = brand.models.find((m) => m.name === spec.model);
     assert.ok(spec.maxSpeed >= model.speed[0] && spec.maxSpeed <= model.speed[1]);
     assert.ok(spec.maxForce >= model.grip[0] && spec.maxForce <= model.grip[1]);
-    assert.equal(spec.color, brand.color);
+    assert.equal(spec.color, ex.modelAppearance(brand, brand.models.find((m) => m.name === spec.model)).color);
   }
 });
 
