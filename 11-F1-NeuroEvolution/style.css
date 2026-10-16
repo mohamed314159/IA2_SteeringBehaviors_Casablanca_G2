@@ -1,0 +1,421 @@
+body {
+  margin: 0;
+  background: #1d2a17;
+  color: #f2f2f2;
+  font-family: "Segoe UI", Arial, sans-serif;
+}
+
+#layout {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  align-items: flex-start;
+}
+
+#menu {
+  width: 260px;
+  flex-shrink: 0;
+  background: #20232a;
+  border: 3px solid #3c3f46;
+  padding: 12px 14px;
+  font-size: 14px;
+}
+
+#menu h1 {
+  font-size: 20px;
+  margin: 0 0 4px;
+  color: #ff3b30;
+}
+
+#menu h2 {
+  font-size: 16px;
+  margin: 14px 0 6px;
+}
+
+.step {
+  margin: 0 0 12px;
+  color: #c7c7c7;
+  font-size: 12px;
+}
+
+#menu label {
+  display: block;
+  margin-top: 10px;
+}
+
+#menu label.inline {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+#menu select,
+#menu input[type="range"],
+#menu button {
+  width: 100%;
+  margin-top: 4px;
+}
+
+#menu button {
+  margin-top: 14px;
+  padding: 8px;
+  background: #e10600;
+  color: #fff;
+  border: 0;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+#menu button:focus-visible,
+#menu select:focus-visible,
+#menu input:focus-visible {
+  outline: 2px solid #ffd800;
+}
+
+#lineages,
+#garageList {
+  padding-left: 0;
+  list-style: none;
+  margin: 0;
+}
+
+#lineages li,
+#garageList li {
+  margin-bottom: 6px;
+  line-height: 1.3;
+}
+
+#lineages small,
+#garageList small {
+  color: #bdbdbd;
+}
+
+.swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 4px;
+  border: 1px solid #fff;
+}
+
+canvas {
+  display: block;
+  border: 3px solid #3c3f46;
+}
+
+#menu button:disabled {
+  background: #6b6b6b;
+  cursor: not-allowed;
+}
+
+#menu {
+  max-height: calc(100vh - 30px);
+  overflow-y: auto;
+}
+
+.buttons {
+  display: flex;
+  gap: 8px;
+}
+
+#menu button.curriculum {
+  background: #2e7d32;
+}
+
+#layerRows {
+  padding-left: 20px;
+  margin: 6px 0;
+}
+
+#layerRows li {
+  margin-bottom: 4px;
+}
+
+#layerRows input[type="number"] {
+  width: 60px;
+}
+
+.confirm {
+  border: 2px solid #e10600;
+  padding: 6px 8px;
+  margin-top: 8px;
+}
+
+.ray-length {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.ray-length input[type="range"] {
+  flex: 1;
+  margin-top: 4px;
+}
+
+#menu .ray-length button.small {
+  min-width: 26px;
+}
+
+dialog {
+  width: min(1180px, calc(100vw - 32px));
+  max-height: calc(100vh - 40px);
+  background: #20232a;
+  color: #f2f2f2;
+  border: 3px solid #3c3f46;
+  padding: 12px 16px;
+  font-family: "Segoe UI", Arial, sans-serif;
+}
+
+dialog::backdrop {
+  background: rgba(0, 0, 0, 0.6);
+}
+
+#confidenceDialog {
+  width: min(720px, calc(100vw - 32px));
+}
+
+.dialog-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.dialog-head h2 {
+  margin: 0;
+  color: #ff3b30;
+}
+
+dialog button {
+  padding: 6px 10px;
+  border: 0;
+  background: #3c3f46;
+  color: #fff;
+  cursor: pointer;
+}
+
+dialog button:focus-visible {
+  outline: 2px solid #ffd800;
+}
+
+.showroom-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.car-card {
+  border: 3px solid #3c3f46;
+  padding: 6px;
+  background: #2a2d34;
+}
+
+.car-card.selected {
+  border-color: #ffd800;
+}
+
+.car-card canvas {
+  width: 100%;
+  height: auto;
+}
+
+.car-card h3 {
+  margin: 6px 0 2px;
+  font-size: 16px;
+}
+
+.car-card .model-name {
+  font-weight: normal;
+}
+
+.car-card .facts,
+.car-card .status {
+  margin: 2px 0;
+  font-size: 12px;
+  color: #c7c7c7;
+}
+
+.car-card .buttons {
+  margin-top: 6px;
+}
+
+.car-card button.select-car {
+  background: #e10600;
+  font-weight: bold;
+}
+
+.car-card.selected button.select-car {
+  background: #2e7d32;
+}
+
+.confidence-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+  font-size: 14px;
+}
+
+.confidence-table th,
+.confidence-table td {
+  text-align: left;
+  padding: 4px 6px;
+  border-bottom: 1px solid #3c3f46;
+}
+
+.confidence-table tr.group th {
+  color: #ffd800;
+  padding-top: 10px;
+}
+
+.confidence-table tr.trained td {
+  color: #8fd18f;
+}
+
+.confidence-table .bar {
+  display: inline-block;
+  width: 60px;
+  height: 8px;
+  margin-right: 6px;
+  background: linear-gradient(90deg, #ffd800 var(--value), #3c3f46 var(--value));
+}
+
+.label-like {
+  margin: 10px 0 0;
+}
+
+.speed-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+#menu .speed-buttons button.small {
+  margin-top: 0;
+  min-width: 40px;
+}
+
+#menu .speed-buttons button[aria-pressed="true"] {
+  background: #ffd800;
+  color: #1b1b1b;
+  font-weight: bold;
+}
+
+#speedEffective {
+  margin: 4px 0 0;
+}
+
+#modelFileStatus.error {
+  color: #ff8a80;
+}
+
+#garageList li button.small {
+  margin-right: 4px;
+}
+
+#obstacleDialog {
+  width: min(640px, calc(100vw - 32px));
+}
+
+.obstacle-editor {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+#obstacleCanvas {
+  width: 240px;
+  height: 240px;
+  border: 2px solid #3c3f46;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.obstacle-editor > div {
+  flex: 1;
+  min-width: 240px;
+}
+
+.buttons.wrap {
+  flex-wrap: wrap;
+}
+
+.obstacle-editor .buttons {
+  margin: 6px 0;
+}
+
+.obstacle-editor label {
+  display: block;
+  margin-top: 8px;
+}
+
+.obstacle-editor input[type="range"] {
+  width: 100%;
+}
+
+dialog button.place {
+  margin-top: 8px;
+  background: #e10600;
+  font-weight: bold;
+}
+
+dialog button:disabled {
+  background: #6b6b6b;
+  color: #d0d0d0;
+  cursor: not-allowed;
+}
+
+#obstacleList {
+  padding-left: 0;
+  list-style: none;
+  margin: 4px 0;
+  font-size: 13px;
+}
+
+#obstacleList li {
+  margin-bottom: 4px;
+}
+
+#selectionCount {
+  margin: 4px 0 0;
+}
+
+#menu button.secondary {
+  background: #3c3f46;
+}
+
+#menu button.small {
+  width: auto;
+  margin-top: 4px;
+  padding: 3px 8px;
+  font-weight: normal;
+  background: #3c3f46;
+}
+
+#garageList li {
+  border-bottom: 1px solid #3c3f46;
+  padding-bottom: 6px;
+}
+
+.sensors {
+  font-family: Consolas, monospace;
+}
+
+.saved-tag {
+  color: #8fd18f;
+}
+
+.topology a {
+  color: #ffd800;
+}
+
+/* Placé en dernier : un bouton désactivé reste grisé, quelle que soit sa couleur. */
+#menu button:disabled,
+#menu button.curriculum:disabled,
+#menu button.secondary:disabled {
+  background: #6b6b6b;
+  color: #d0d0d0;
+  cursor: not-allowed;
+}

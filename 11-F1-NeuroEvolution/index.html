@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>F1 Neuroévolution</title>
+  <link rel="stylesheet" href="style.css">
+
+  <script src="libraries/p5.min.js"></script>
+  <script src="random.js"></script>
+  <script src="vehicle.js"></script>
+  <script src="ray.js"></script>
+  <script src="sensor-settings.js"></script>
+  <script src="sim-speed.js"></script>
+  <script src="circuits-data.js"></script>
+  <script src="training-circuits-data.js"></script>
+  <script src="circuit.js"></script>
+  <script src="brands.js"></script>
+  <script src="network-config.js"></script>
+  <script src="neural-network.js"></script>
+  <script src="architecture.js"></script>
+  <script src="grass.js"></script>
+  <script src="track-renderer.js"></script>
+  <script src="confidence.js"></script>
+  <script src="car-design.js"></script>
+  <script src="obstacle.js"></script>
+  <script src="obstacle-editor.js"></script>
+  <script src="car.js"></script>
+  <script src="evolution.js"></script>
+  <script src="garage.js"></script>
+  <script src="showroom.js"></script>
+  <script src="model-file.js"></script>
+  <script src="curriculum.js"></script>
+  <script src="sketch.js"></script>
+</head>
+
+<body>
+  <main id="layout">
+    <aside id="menu">
+      <h1>F1 Neuroévolution</h1>
+      <p class="step">Étape 11 : éditeur d'obstacles</p>
+
+      <label for="circuitSelect">Circuit</label>
+      <select id="circuitSelect"></select>
+
+      <h2>Voitures à entraîner</h2>
+      <button id="showroomButton" type="button" class="secondary">Choisir les voitures</button>
+      <p id="selectionCount" role="status">0 voiture sélectionnée</p>
+
+      <label for="rayLengthSlider">Longueur des rayons : <span id="rayLengthValue">160 px</span></label>
+      <div class="ray-length">
+        <button id="rayShorterButton" type="button" class="small" aria-label="Raccourcir les rayons">−</button>
+        <input type="range" id="rayLengthSlider" min="40" max="300" step="5" value="160">
+        <button id="rayLongerButton" type="button" class="small" aria-label="Allonger les rayons">+</button>
+        <button id="rayResetButton" type="button" class="small">Par défaut</button>
+      </div>
+
+      <p class="label-like" id="speedLabel">Vitesse de simulation</p>
+      <div id="speedButtons" class="speed-buttons" role="group" aria-labelledby="speedLabel"></div>
+      <p id="speedEffective" class="step" role="status"></p>
+
+      <label class="inline"><input type="checkbox" id="raysCheckbox"> Rayons du leader</label>
+
+      <div class="buttons">
+        <button id="trainButton" type="button">Entraîner</button>
+        <button id="stopButton" type="button" class="secondary">Arrêter</button>
+      </div>
+      <button id="curriculumButton" type="button" class="curriculum">Faire entraîner la voiture dans des circuits d'entraînement</button>
+      <p id="levelInfo"></p>
+
+      <p class="topology">Réseau : <strong id="topologyValue">-</strong>
+        · <a href="network.html" target="_blank" rel="noopener">Voir / modifier le réseau</a></p>
+
+      <p>Générations terminées : <strong id="generationValue">-</strong> · En piste : <strong id="aliveValue">-</strong></p>
+
+      <h2>Lignées en piste</h2>
+      <ul id="lineages"></ul>
+
+      <h2>Obstacles</h2>
+      <div class="buttons">
+        <button id="drawObstacleButton" type="button" class="secondary">Dessiner un obstacle</button>
+        <button id="clearObstaclesButton" type="button" class="secondary">Tout effacer</button>
+      </div>
+      <p id="obstacleStatus" class="step" role="status"></p>
+      <ul id="obstacleList"></ul>
+
+      <h2>Garage</h2>
+      <button id="loadModelButton" type="button" class="secondary">Charger un modèle (.json)</button>
+      <input type="file" id="modelFileInput" accept=".json,application/json" hidden>
+      <div id="modelConfirm" class="confirm" hidden>
+        <p id="modelConfirmText"></p>
+        <div class="buttons">
+          <button id="modelConfirmButton" type="button">Remplacer</button>
+          <button id="modelCancelButton" type="button" class="secondary">Annuler</button>
+        </div>
+      </div>
+      <p id="modelFileStatus" class="step" role="status"></p>
+      <ul id="garageList"></ul>
+    </aside>
+    <div id="canvas-container"></div>
+  </main>
+
+  <dialog id="showroomDialog" aria-labelledby="showroomTitle">
+    <div class="dialog-head">
+      <h2 id="showroomTitle">Vitrine des voitures</h2>
+      <button id="showroomClose" type="button" class="small">Fermer</button>
+    </div>
+    <p class="step">Sélectionnez les voitures à entraîner. « Confiance par circuit » montre la confiance de la voiture sur chaque circuit.</p>
+    <div id="showroomGrid" class="showroom-grid"></div>
+  </dialog>
+
+  <dialog id="obstacleDialog" aria-labelledby="obstacleTitle">
+    <div class="dialog-head">
+      <h2 id="obstacleTitle">Dessiner un obstacle</h2>
+      <button id="obstacleEditorClose" type="button" class="small">Fermer</button>
+    </div>
+    <div class="obstacle-editor">
+      <canvas id="obstacleCanvas" role="img" aria-label="Grille de dessin de l'obstacle : chaque clic pose un point, cliquer sur le premier point ferme la forme"></canvas>
+      <div>
+        <p class="step">Cliquez sur la grille pour poser les sommets ; cliquer sur le premier point (jaune) ferme la forme. Ou partez d'une forme :</p>
+        <div id="obstaclePresets" class="buttons wrap"></div>
+        <div class="buttons">
+          <button id="obstacleUndo" type="button" class="small">Annuler le dernier point</button>
+          <button id="obstacleClear" type="button" class="small">Effacer</button>
+        </div>
+        <label for="obstacleSize">Taille (plus grande dimension) : <span id="obstacleSizeValue">6 m</span></label>
+        <input type="range" id="obstacleSize" min="2" max="20" step="1" value="6">
+        <p id="obstacleEditorStatus" class="step" role="status"></p>
+        <button id="obstaclePlaceButton" type="button" class="place">Placer sur le circuit</button>
+        <p class="step">Ensuite : cliquez sur le circuit pour poser l'obstacle, R pour le tourner, Échap pour annuler.</p>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="confidenceDialog" aria-labelledby="confidenceTitle">
+    <div class="dialog-head">
+      <h2 id="confidenceTitle">Confiance par circuit</h2>
+      <button id="confidenceClose" type="button" class="small">Retour à la vitrine</button>
+    </div>
+    <table id="confidenceTable" class="confidence-table"></table>
+  </dialog>
+</body>
+
+</html>

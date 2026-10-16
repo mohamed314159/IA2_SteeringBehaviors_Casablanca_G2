@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Réseau de neurones</title>
+  <link rel="stylesheet" href="style.css">
+
+  <script src="libraries/p5.min.js"></script>
+  <script src="random.js"></script>
+  <script src="network-config.js"></script>
+  <script src="neural-network.js"></script>
+  <script src="architecture.js"></script>
+  <script src="confidence.js"></script>
+  <script src="evolution.js"></script>
+  <script src="garage.js"></script>
+  <script src="network-viewer.js"></script>
+</head>
+
+<body>
+  <main id="layout">
+    <aside id="menu">
+      <h1>Réseau de neurones</h1>
+      <section id="architectureEditor" aria-labelledby="architectureTitle">
+        <h2 id="architectureTitle">Architecture (couches cachées)</h2>
+        <p class="step">Entrées (rayons + vitesse) et sorties (direction, accélérateur) sont fixes. Appliquer une nouvelle architecture <strong>efface toutes les générations</strong> : il faudra réentraîner les voitures.</p>
+        <ol id="layerRows"></ol>
+        <button id="addLayerButton" type="button" class="small">+ Ajouter une couche cachée</button>
+        <label for="activationSelect">Activation des couches cachées</label>
+        <select id="activationSelect">
+          <option value="sigmoid">sigmoid</option>
+          <option value="tanh">tanh</option>
+          <option value="relu">relu</option>
+        </select>
+        <p id="architectureDraft" class="step"></p>
+        <div class="buttons">
+          <button id="applyArchitectureButton" type="button">Appliquer</button>
+          <button id="resetArchitectureButton" type="button" class="secondary">network-config.js</button>
+        </div>
+        <div id="confirmBox" class="confirm" hidden>
+          <p id="confirmText"></p>
+          <div class="buttons">
+            <button id="confirmApplyButton" type="button">Confirmer et effacer</button>
+            <button id="cancelApplyButton" type="button" class="secondary">Annuler</button>
+          </div>
+        </div>
+        <p id="architectureStatus" role="status"></p>
+      </section>
+
+      <label for="sourceSelect">Afficher</label>
+      <select id="sourceSelect"></select>
+
+      <p id="networkInfo"></p>
+
+      <h2>Entrées de test</h2>
+      <p class="step">Proximité des rayons : 0 = rien en vue, 1 = mur collé. Vitesse : fraction de v<sub>max</sub>.</p>
+      <div id="inputSliders"></div>
+
+      <p class="step">Bleu = poids positif, rouge = négatif, épaisseur = importance. Remplissage des neurones = activation (valeur affichée).</p>
+    </aside>
+    <div id="network-canvas"></div>
+  </main>
+</body>
+
+</html>
