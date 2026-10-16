@@ -28,7 +28,7 @@ Règle de mise à jour : chaque nouvelle demande est ajoutée à la pile sous la
 | 18 | Effet de flammes sur la ligne d'arrivée quand une voiture la franchit | **DONE** |
 | 19 | Circuits d'entraînement actuels plus petits : surface divisée par 4 | **DONE** |
 | 20 | 5 nouveaux circuits d'entraînement pour les bases de la course (drift à gauche, drift à droite…) | **DONE** |
-| 21 | Plus de circuits de Formule 1 | à faire |
+| 21 | Plus de circuits de Formule 1 | **DONE** |
 | 22 | Designs de voitures plus faciles à distinguer (deux voitures rouges de marques différentes se ressemblent trop) | à faire |
 | 23 | Longueur des rayons : plage bien plus grande que 300 px, maximum = largeur de l'écran | à faire |
 
@@ -139,6 +139,10 @@ Règle de mise à jour : chaque nouvelle demande est ajoutée à la pile sous la
 - Niveaux 6 à 10, à la suite des 5 premiers : drift à gauche (tracé en D anti-horaire), drift à droite (miroir, `mirrorX`), freinage avant l'épingle, virage qui se referme (`spiralPoints`, rayon 24 → 12), haricot (droite puis gauche).
 - Tous à 1/4 de surface, piste de 14 m, 1 tour ; tracés validés numériquement (pas de croisement, rayon minimal > demi-largeur de piste, ≥ 20 px entre deux portions).
 - Le parcours d'entraînement enchaîne les 10 niveaux ; le libellé du bouton est calculé d'après `trainingLevelKeys()`.
+
+### Étape 21 – Plus de circuits F1, épingles très serrées — **DONE**
+- 5 circuits stylisés ajoutés : Silverstone, Monaco, Montréal, Red Bull Ring, Hungaroring (8 au total).
+- Demande : des virages « encore plus serrés » que la demi-largeur de piste. `removeEdgeLoops` (`circuit.js`) coupe la boucle du bord intérieur au point de croisement (même nombre de points, murs de longueur nulle ignorés par les rayons) ; recherche limitée à π × largeur de piste ; `hasSelfIntersection` ignore deux segments qui se touchent au point de coupe. Bords des circuits existants inchangés (testé).
 
 ## 2. Modèle (Reynolds)
 

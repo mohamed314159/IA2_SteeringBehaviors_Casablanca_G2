@@ -28,7 +28,7 @@ Le détail de chaque étape et l'architecture du projet sont dans [ARCHITECTURE.
 | 18 | Flammes sur la ligne d'arrivée quand une voiture la franchit | ✅ |
 | 19 | Circuits d'entraînement actuels plus petits : surface divisée par 4 | ✅ |
 | 20 | 5 nouveaux circuits d'entraînement pour les bases de la course (drift à gauche, drift à droite…) | ✅ |
-| 21 | Plus de circuits de Formule 1 | à faire |
+| 21 | Plus de circuits de Formule 1 (8 au total), épingles très serrées | ✅ |
 | 22 | Designs de voitures plus faciles à distinguer (deux voitures rouges de marques différentes se ressemblent trop) | à faire |
 | 23 | Longueur des rayons : plage bien plus grande que 300 px, maximum = largeur de l'écran | à faire |
 
@@ -68,7 +68,8 @@ Le bouton **Circuit : …** du menu ouvre la vitrine.
 ## Paramètres
 
 - **Échelle F1** : piste de 44 px ≈ 14 m, donc 3,14 px/m. Voiture 5,6 m × 2 m → 17,6 × 6,3 px. La proportion voiture / largeur de piste est réelle ; la longueur du circuit est compressée pour tenir à l'écran (`circuit.js`).
-- **Circuits** (`circuits-data.js`) : tracés stylisés de Monza, Spa-Francorchamps et Interlagos (points de contrôle lissés par Catmull-Rom, pas des relevés GPS).
+- **Circuits** (`circuits-data.js`) : 8 tracés stylisés : Monza, Spa-Francorchamps, Interlagos, puis (étape 21) Silverstone, Monaco, Montréal, Red Bull Ring et Hungaroring. Ce sont des points de contrôle lissés par Catmull-Rom, pas des relevés GPS ; le sens de course est celui de l'ordre des points.
+- **Épingles très serrées (étape 21)** : à Monaco (épingle du Grand Hôtel), Montréal, au Red Bull Ring (Remus) et à Silverstone (The Loop), le rayon du virage descend sous la demi-largeur de piste (16 à 21 px pour 22 px). Le bord intérieur, décalé de la ligne médiane, se replierait alors en petite boucle. `Circuit` la coupe au point de croisement (`removeEdgeLoops`), si bien que le bord forme une pointe nette à la corde. La recherche reste limitée à un demi-tour de virage, pour ne jamais masquer un vrai chevauchement entre deux portions du tracé ; les tests vérifient au moins 10 px entre deux portions éloignées.
 - **Marques** (`brands.js`) : Tiyoti, Ferraaa, Limbargana, Mercedas, McLaran, Porshe, Bugotti, Alpinne (noms volontairement déformés, sans la vraie marque affichée). Chaque modèle a une livrée et un numéro, et définit des plages ; chaque voiture lâchée tire au hasard :
   - `maxSpeed` (px/image ; 4,7 px/image ≈ 90 m/s à 60 images/s),
   - `maxForce` = adhérence (px/image²).

@@ -11,7 +11,7 @@ const plain = (value) => JSON.parse(JSON.stringify(value));
 test("la vitrine propose tous les circuits : F1 puis niveaux dans l'ordre", () => {
   const entries = ex.allCircuitEntries();
   assert.deepEqual(plain(entries.map((e) => e.key)), [
-    "monza", "spa", "interlagos",
+    "monza", "spa", "interlagos", "silverstone", "monaco", "montreal", "redBullRing", "hungaroring",
     "niveau-1-circulaire", "niveau-2-carre", "niveau-3-drift", "niveau-4-epingles", "niveau-5-coince",
     "niveau-6-drift-gauche", "niveau-7-drift-droite", "niveau-8-freinage", "niveau-9-virage-qui-se-referme", "niveau-10-haricot"
   ]);

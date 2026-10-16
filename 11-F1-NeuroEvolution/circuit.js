@@ -83,6 +83,39 @@ function segmentsIntersect(p1, p2, p3, p4) {
   return ((d1 > 0) !== (d2 > 0)) && ((d3 > 0) !== (d4 > 0));
 }
 
+// Point de croisement des droites (p1 p2) et (p3 p4) ; null si elles sont parallèles.
+function segmentIntersection(p1, p2, p3, p4) {
+  const den = (p1.x - p2.x) * (p3.y - p4.y) - (p1.y - p2.y) * (p3.x - p4.x);
+  if (den === 0) return null;
+  const t = ((p1.x - p3.x) * (p3.y - p4.y) - (p1.y - p3.y) * (p3.x - p4.x)) / den;
+  return { x: p1.x + t * (p2.x - p1.x), y: p1.y + t * (p2.y - p1.y) };
+}
+
+// Virage plus serré que la demi-largeur de piste : le bord intérieur, décalé de
+// la ligne médiane, se replie en petite boucle à la corde. On la coupe au point
+// de croisement : les points de la boucle sont ramenés sur ce point (même nombre
+// de points, murs de longueur nulle ignorés par les rayons). La recherche est
+// limitée à maxSpan segments (un virage), pour ne jamais masquer un vrai
+// chevauchement entre deux portions éloignées du tracé.
+function removeEdgeLoops(edge, maxSpan) {
+  const n = edge.length;
+  const out = edge.map((p) => ({ x: p.x, y: p.y }));
+  for (let i = 0; i < n; i++) {
+    const a = out[i];
+    const b = out[(i + 1) % n];
+    for (let span = Math.min(maxSpan, n - 2); span >= 2; span--) {   // la plus grande boucle d'abord
+      const c = out[(i + span) % n];
+      const d = out[(i + span + 1) % n];
+      if (!segmentsIntersect(a, b, c, d)) continue;
+      const p = segmentIntersection(a, b, c, d);
+      if (!p || !Number.isFinite(p.x) || !Number.isFinite(p.y)) continue;
+      for (let k = 1; k <= span; k++) out[(i + k) % n] = { x: p.x, y: p.y };
+      break;
+    }
+  }
+  return out;
+}
+
 // Ramène une différence d'abscisse curviligne dans [-L/2, L/2] (passage de la ligne).
 function wrapArcDelta(delta, totalLength) {
   if (delta > totalLength / 2) return delta - totalLength;
@@ -116,6 +149,7 @@ class Circuit {
     // surface (areaRatio, ex. 1/4 pour les niveaux d'entraînement), centré.
     this.areaRatio = Circuit.validAreaRatio(layout.areaRatio);
     const fitted = Circuit.fitToCanvas(layout.points, canvasWidth, canvasHeight, margin + this.trackWidth / 2, Math.sqrt(this.areaRatio));
+    this.spacing = spacing;
     this.center = resampleClosed(catmullRomClosed(fitted, 12), spacing);
     this.buildEdges();
     this.buildArcLengths();
@@ -158,6 +192,11 @@ class Circuit {
       this.leftEdge.push({ x: c.x + ty * half, y: c.y - tx * half });
       this.rightEdge.push({ x: c.x - ty * half, y: c.y + tx * half });
     }
+    // Virages très serrés autorisés (étape 21) : boucle du bord intérieur coupée.
+    // Une boucle vient d'un virage d'au plus un demi-tour : arc ≤ π × largeur.
+    const maxSpan = Math.ceil((Math.PI * this.trackWidth) / this.spacing);
+    this.leftEdge = removeEdgeLoops(this.leftEdge, maxSpan);
+    this.rightEdge = removeEdgeLoops(this.rightEdge, maxSpan);
     this.walls = [];
     for (const edge of [this.leftEdge, this.rightEdge]) {
       for (let i = 0; i < n; i++) {
@@ -256,6 +295,9 @@ class Circuit {
           const gap = Math.abs(s.i - r.i);
           if (gap <= 1 || gap >= n - 1) continue; // segments adjacents
         }
+        // Deux segments qui se touchent au point de coupe d'une boucle ne se croisent pas.
+        const touch = (p, q) => p.x === q.x && p.y === q.y;
+        if (touch(s.a, r.a) || touch(s.a, r.b) || touch(s.b, r.a) || touch(s.b, r.b)) continue;
         if (segmentsIntersect(s.a, s.b, r.a, r.b)) return true;
       }
     }

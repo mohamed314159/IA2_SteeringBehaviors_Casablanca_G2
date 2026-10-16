@@ -59,7 +59,7 @@ export function loadExample(files = SCRIPTS, globals = {}) {
   return vm.runInContext(`({
     Vector: p5.Vector, createVector, createRng, randomBetween, randomPick,
     Vehicle, Ray, F1_CIRCUITS, Circuit, LapTracker, catmullRomClosed, resampleClosed,
-    projectOnSegment, segmentsIntersect, wrapArcDelta,
+    projectOnSegment, segmentsIntersect, segmentIntersection, removeEdgeLoops, wrapArcDelta,
     F1_CAR_LENGTH_M, F1_CAR_WIDTH_M, F1_TRACK_WIDTH_M,
     CAR_BRANDS, createRandomCarSpec, GRASS_PALETTE, generateGrassTexels, drawGrass,
     FLAME_EMIT_FRAMES, FLAME_PER_FRAME, FLAME_MAX_PARTICLES, FLAME_LIFE_MIN, FLAME_LIFE_MAX,
