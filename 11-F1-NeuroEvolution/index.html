@@ -22,6 +22,7 @@
   <script src="architecture.js"></script>
   <script src="grass.js"></script>
   <script src="track-renderer.js"></script>
+  <script src="circuit-showroom.js"></script>
   <script src="confidence.js"></script>
   <script src="car-design.js"></script>
   <script src="obstacle.js"></script>
@@ -39,10 +40,11 @@
   <main id="layout">
     <aside id="menu">
       <h1>F1 Neuroévolution</h1>
-      <p class="step">Étape 11 : éditeur d'obstacles</p>
+      <p class="step">Étape 12 : vitrine des circuits</p>
 
-      <label for="circuitSelect">Circuit</label>
-      <select id="circuitSelect"></select>
+      <h2>Circuit</h2>
+      <button id="circuitShowroomButton" type="button" class="secondary">Choisir le circuit</button>
+      <p id="currentCircuit" role="status">Circuit actuel : -</p>
 
       <h2>Voitures à entraîner</h2>
       <button id="showroomButton" type="button" class="secondary">Choisir les voitures</button>
@@ -100,6 +102,15 @@
     </aside>
     <div id="canvas-container"></div>
   </main>
+
+  <dialog id="circuitDialog" aria-labelledby="circuitDialogTitle">
+    <div class="dialog-head">
+      <h2 id="circuitDialogTitle">Vitrine des circuits</h2>
+      <button id="circuitDialogClose" type="button" class="small">Fermer</button>
+    </div>
+    <p class="step">Choisissez le circuit actuel. Changer de circuit arrête l'entraînement en cours.</p>
+    <div id="circuitGrid" class="showroom-grid"></div>
+  </dialog>
 
   <dialog id="showroomDialog" aria-labelledby="showroomTitle">
     <div class="dialog-head">

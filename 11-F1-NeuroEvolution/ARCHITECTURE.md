@@ -19,6 +19,7 @@ Règle de mise à jour : chaque nouvelle demande est ajoutée à la pile sous la
 | 9 | Accélération de la simulation par un facteur choisi | **DONE** |
 | 10 | Sauvegarde / chargement d'un modèle en fichier, avec sa génération | **DONE** |
 | 11 | Éditeur d'obstacles : dessiner un obstacle dans le menu et le placer sur le circuit | **DONE** |
+| 12 | Vitrine des circuits à la place de la liste déroulante | **DONE** |
 
 ### Étape 1 – Circuit, décor, marques, rayons — **DONE**
 - Trois circuits F1 stylisés (Monza, Spa, Interlagos) lissés par Catmull-Rom ; bords sans croisement vérifiés par les tests.
@@ -82,6 +83,10 @@ Règle de mise à jour : chaque nouvelle demande est ajoutée à la pile sous la
 - Les côtés de l'obstacle sont des murs pour les rayons (`extraWalls` de `Car.sense()`) ; contact → voiture éliminée (`Car.crashIntoObstacles`).
 - `Obstacle extends Vehicle`, immobile ; obstacles mémorisés par circuit.
 
+### Étape 12 – Vitrine des circuits — **DONE**
+- Le circuit actuel se choisit dans une vitrine (bouton « Choisir le circuit ») et non plus dans une liste déroulante.
+- Une carte par circuit (F1 puis niveaux) : miniature du tracé avec ligne de départ et obstacles, longueur et largeur en mètres, compétence, obstacles, voitures entraînées ici ; « Choisir ce circuit » / « Circuit actuel ✓ ».
+
 ## 2. Modèle (Reynolds)
 
 ```text
@@ -125,6 +130,7 @@ Règles de course (scène) : sortie de piste, immobilité, tours  (Car.applyRace
 | `model-file.js` | Modèle en fichier JSON : export, nom de fichier, lecture et vérifications |
 | `obstacle.js` | `Obstacle extends Vehicle` (immobile) : polygone, murs, collision, mémorisation par circuit |
 | `obstacle-editor.js` | Éditeur de forme d'obstacle (fenêtre du menu) |
+| `circuit-showroom.js` | Vitrine des circuits : liste des circuits, miniatures, fiches, choix du circuit actuel |
 | `random.js` | Générateur aléatoire à graine (tests reproductibles) |
 | `sim-speed.js` | Accélération : pas de simulation par image, budget de temps, vitesse atteinte |
 | `sketch.js` | Contrôleur : menu, modes (entraînement, parcours, démo), boucle `draw()` |

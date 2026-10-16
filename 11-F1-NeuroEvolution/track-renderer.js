@@ -79,3 +79,41 @@ function drawClosedPolyline(g, points) {
   for (const p of points) g.vertex(p.x, p.y);
   g.endShape(CLOSE);
 }
+
+// Miniature d'un circuit pour la vitrine des circuits : herbe unie, asphalte,
+// bords blancs, ligne de départ et obstacles, à l'échelle `scale` du canvas du jeu.
+function drawTrackThumbnail(g, circuit, scale, obstacles = [], canvasWidth = 1200, canvasHeight = 760) {
+  const polyline = (points) => {
+    g.beginShape();
+    for (const p of points) g.vertex(p.x, p.y);
+    g.endShape(g.CLOSE);
+  };
+  g.push();
+  g.background(103, 156, 58);
+  g.translate((g.width - canvasWidth * scale) / 2, (g.height - canvasHeight * scale) / 2);
+  g.scale(scale);
+  g.noFill();
+  g.stroke(62, 64, 68);
+  g.strokeWeight(circuit.trackWidth);
+  polyline(circuit.center);
+  g.stroke(235);
+  g.strokeWeight(1.5 / scale);
+  polyline(circuit.leftEdge);
+  polyline(circuit.rightEdge);
+  // Ligne de départ.
+  const start = circuit.startPose(0);
+  const l = circuit.leftEdge[start.index];
+  const r = circuit.rightEdge[start.index];
+  g.stroke(255, 216, 0);
+  g.strokeWeight(3 / scale);
+  g.line(l.x, l.y, r.x, r.y);
+  // Obstacles posés.
+  g.noStroke();
+  g.fill(225, 40, 30);
+  for (const obstacle of obstacles) {
+    g.beginShape();
+    for (const [x, y] of obstacle.points) g.vertex(x, y);
+    g.endShape(g.CLOSE);
+  }
+  g.pop();
+}

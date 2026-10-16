@@ -205,6 +205,51 @@ dialog button:focus-visible {
   margin-top: 10px;
 }
 
+.circuit-group {
+  grid-column: 1 / -1;
+  margin: 8px 0 0;
+  color: #ffd800;
+}
+
+.circuit-card {
+  border: 3px solid #3c3f46;
+  padding: 6px;
+  background: #2a2d34;
+}
+
+.circuit-card.selected {
+  border-color: #ffd800;
+}
+
+.circuit-card canvas {
+  width: 100%;
+  height: auto;
+}
+
+.circuit-card h3 {
+  margin: 6px 0 2px;
+  font-size: 16px;
+}
+
+.circuit-card .facts {
+  margin: 2px 0 6px;
+  font-size: 12px;
+  color: #c7c7c7;
+}
+
+.circuit-card button.select-car {
+  background: #e10600;
+  font-weight: bold;
+}
+
+.circuit-card.selected button.select-car {
+  background: #2e7d32;
+}
+
+#currentCircuit {
+  margin: 4px 0 0;
+}
+
 .car-card {
   border: 3px solid #3c3f46;
   padding: 6px;

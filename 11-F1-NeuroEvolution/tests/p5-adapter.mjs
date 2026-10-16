@@ -26,7 +26,7 @@ class Vector {
 
 export const SCRIPTS = [
   "random.js", "vehicle.js", "ray.js", "sensor-settings.js", "sim-speed.js", "circuits-data.js", "training-circuits-data.js", "circuit.js",
-  "brands.js", "network-config.js", "neural-network.js", "architecture.js", "grass.js", "confidence.js", "car-design.js", "obstacle.js", "car.js",
+  "track-renderer.js", "circuit-showroom.js", "brands.js", "network-config.js", "neural-network.js", "architecture.js", "grass.js", "confidence.js", "car-design.js", "obstacle.js", "car.js",
   "evolution.js", "garage.js", "curriculum.js", "showroom.js", "model-file.js", "network-viewer.js"
 ];
 
@@ -74,7 +74,9 @@ export function loadExample(files = SCRIPTS) {
     parseModelFile, modelMatchesArchitecture, describeModelArchitecture,
     Obstacle, OBSTACLE_PRESETS, OBSTACLES_STORAGE_KEY, OBSTACLE_MIN_POINTS, OBSTACLE_MAX_POINTS,
     polygonArea, polygonCentroid, validateShape, normalizeShape, pointInPolygon,
-    loadObstacles, saveObstacles, obstacleWalls, CONFIDENCE_START, CONFIDENCE_MIN, CONFIDENCE_MAX,
+    loadObstacles, saveObstacles, obstacleWalls,
+    allCircuitEntries, circuitLayout, thumbnailScale, circuitCardInfo, drawTrackThumbnail,
+    CIRCUIT_THUMB_WIDTH, CIRCUIT_THUMB_HEIGHT, CONFIDENCE_START, CONFIDENCE_MIN, CONFIDENCE_MAX,
     CONFIDENCE_INERTIA, CONFIDENCE_FULL_SECONDS,
     TRAINING_CIRCUITS, trainingLevelKeys, Curriculum,
     DEFAULT_RAY_LENGTH, MIN_RAY_LENGTH, MAX_RAY_LENGTH, RAY_LENGTH_STORAGE_KEY,

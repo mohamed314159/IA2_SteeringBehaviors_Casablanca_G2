@@ -22,6 +22,7 @@ let showRays = true;
 let circuitKey = "monza";
 let ui = {};
 let showroom;                      // vitrine des voitures (showroom.js)
+let circuitShowroom;               // vitrine des circuits (circuit-showroom.js)
 let speedFactor = 1;               // accélération choisie (sim-speed.js) : 1, 2, 5… ou "max"
 let obstacles = [];                // obstacles du circuit affiché (obstacle.js)
 let obstacleWallList = [];         // leurs côtés, vus comme des murs par les rayons
@@ -56,7 +57,7 @@ function safeLocalStorage() {
 }
 
 function bindMenu() {
-  ui.circuitSelect = document.getElementById("circuitSelect");
+  ui.circuitName = document.getElementById("currentCircuit");
   ui.selectionCount = document.getElementById("selectionCount");
   ui.raysCheckbox = document.getElementById("raysCheckbox");
   ui.trainButton = document.getElementById("trainButton");
@@ -69,25 +70,7 @@ function bindMenu() {
   ui.garageList = document.getElementById("garageList");
   ui.topology = document.getElementById("topologyValue");
 
-  // Liste déroulante : circuits F1 puis niveaux d'entraînement.
-  const groups = [["Formule 1", Object.keys(F1_CIRCUITS)], ["Niveaux d'entraînement", trainingLevelKeys()]];
-  for (const [label, keys] of groups) {
-    const group = document.createElement("optgroup");
-    group.label = label;
-    for (const key of keys) {
-      const option = document.createElement("option");
-      option.value = key;
-      option.textContent = circuitLayout(key).name;
-      group.appendChild(option);
-    }
-    ui.circuitSelect.appendChild(group);
-  }
-  ui.circuitSelect.value = circuitKey;
-  ui.circuitSelect.addEventListener("change", () => {
-    stopTraining();
-    statusMessage = "";
-    buildCircuit(ui.circuitSelect.value);
-  });
+  buildCircuitShowroom();
 
   showTopology();
   // Une modification faite dans network.html (autre onglet) arrive ici.
@@ -234,7 +217,7 @@ function buildShowroom() {
     confidenceTitle: document.getElementById("confidenceTitle"),
     confidenceTable: document.getElementById("confidenceTable"),
     garage: () => garage,
-    circuits: allCircuitsList,
+    circuits: allCircuitEntries,
     pixelsPerMeter: TRACK_WIDTH / F1_TRACK_WIDTH_M,
     onSelectionChange: (count) => {
       ui.selectionCount.textContent = selectionLabel(count);
@@ -247,12 +230,28 @@ function buildShowroom() {
   ui.selectionCount.textContent = selectionLabel(0);
 }
 
-// Tous les circuits de la liste : [{ key, name, group }].
-function allCircuitsList() {
-  return [
-    ...Object.keys(F1_CIRCUITS).map((key) => ({ key, name: F1_CIRCUITS[key].name, group: "Formule 1" })),
-    ...trainingLevelKeys().map((key) => ({ key, name: TRAINING_CIRCUITS[key].name, group: "Niveaux d'entraînement" }))
-  ];
+// Vitrine des circuits : le bouton l'ouvre ; choisir une carte arrête
+// l'entraînement en cours et charge le circuit.
+function buildCircuitShowroom() {
+  const dialog = document.getElementById("circuitDialog");
+  circuitShowroom = new CircuitShowroom({
+    dialog,
+    grid: document.getElementById("circuitGrid"),
+    canvasWidth: CANVAS_WIDTH,
+    canvasHeight: CANVAS_HEIGHT,
+    trackWidth: TRACK_WIDTH,
+    pixelsPerMeter: TRACK_WIDTH / F1_TRACK_WIDTH_M,
+    garage: () => garage,
+    obstacles: (key) => (key === circuitKey ? obstacles : loadObstacles(safeLocalStorage(), key)),
+    current: () => circuitKey,
+    onChoose: (key) => {
+      stopTraining();
+      statusMessage = "";
+      buildCircuit(key);
+    }
+  });
+  document.getElementById("circuitShowroomButton").addEventListener("click", () => circuitShowroom.open());
+  document.getElementById("circuitDialogClose").addEventListener("click", () => circuitShowroom.close());
 }
 
 function selectedModels() {
@@ -266,10 +265,6 @@ function updateButtons() {
   ui.stopButton.disabled = !active;
 }
 
-function circuitLayout(key) {
-  return F1_CIRCUITS[key] || TRAINING_CIRCUITS[key];
-}
-
 function isTrainingLevel(key) {
   return key in TRAINING_CIRCUITS;
 }
@@ -278,7 +273,7 @@ function isTrainingLevel(key) {
 // L'échelle est celle d'une piste F1 : la voiture garde la même taille partout.
 function buildCircuit(key) {
   circuitKey = key;
-  ui.circuitSelect.value = key;
+  ui.circuitName.textContent = `Circuit actuel : ${circuitLayout(key).name}`;
   circuit = new Circuit(circuitLayout(key), {
     key,
     canvasWidth: CANVAS_WIDTH, canvasHeight: CANVAS_HEIGHT, trackWidth: TRACK_WIDTH,

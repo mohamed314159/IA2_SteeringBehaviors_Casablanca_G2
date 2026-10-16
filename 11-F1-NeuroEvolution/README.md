@@ -19,6 +19,7 @@ Le détail de chaque étape et l'architecture du projet sont dans [ARCHITECTURE.
 | 9 | Accélération de la simulation par un facteur choisi (×1 à ×100, max), facteur atteint affiché | ✅ |
 | 10 | Sauvegarde / chargement d'un modèle en fichier (.json), avec sa génération | ✅ |
 | 11 | Éditeur d'obstacles : dessiner un obstacle dans le menu et le placer sur le circuit | ✅ |
+| 12 | Vitrine des circuits (miniature et fiche de chaque circuit) à la place de la liste déroulante | ✅ |
 
 ## Lancement
 
@@ -28,7 +29,15 @@ Servir le dossier en HTTP (p5.js 1.7.0 est embarqué dans `libraries/`), par exe
 python -m http.server 8761
 ```
 
-puis ouvrir `http://localhost:8761`.
+puis ouvrir `http://localhost:8761`. Après une mise à jour des fichiers, recharger avec **Ctrl+F5** : sinon le navigateur peut garder d'anciens scripts en cache.
+
+## Vitrine des circuits (`circuit-showroom.js`)
+
+Menu, « Circuit » : le bouton **Choisir le circuit** ouvre la vitrine ; en dessous s'affiche « Circuit actuel : … ».
+
+- Une carte par circuit, rangées en « Formule 1 » puis « Niveaux d'entraînement » : miniature du tracé (piste, bords, ligne de départ en jaune, obstacles posés en rouge) et fiche (longueur et largeur en mètres à l'échelle du jeu, compétence pour un niveau, nombre d'obstacles, voitures du garage entraînées sur ce circuit).
+- **Choisir ce circuit** charge le circuit et ferme la vitrine (l'entraînement en cours s'arrête). Le circuit actuel est encadré en jaune avec « Circuit actuel ✓ ».
+- Le parcours d'entraînement change de circuit tout seul ; « Circuit actuel » suit.
 
 ## Paramètres
 
@@ -70,7 +79,7 @@ Mesure de l'étape 3 (alors avec 3 tours, graine fixe sur Monza) : Tiyoti partai
 - Chaque circuit (F1 ou niveau) a, pour chaque lignée, sa **fiche** dans le garage : meilleur pourcentage (et temps), confiance, validation.
 - Entraîner une lignée sur un circuit reprend la **confiance de ce circuit** (60 % s'il n'y a jamais roulé) ; le cerveau, lui, vient du garage (génération choisie).
 - Si le meilleur d'une génération **boucle le tour**, la confiance du circuit passe à **100 %** et la lignée est marquée **« voiture entraînée dans le circuit X »** : elle ne s'y entraîne plus (retirée des générations suivantes ; « Entraîner » la refuse ensuite avec un message). Quand toutes les lignées ont validé, l'entraînement s'arrête.
-- **Pourcentage propre au circuit sélectionné** : au repos, le panneau liste chaque voiture du garage avec son pourcentage **sur le circuit affiché** ; changer de circuit dans la liste change les pourcentages (« 0.0 % (jamais entraînée ici) » sur un circuit inconnu).
+- **Pourcentage propre au circuit sélectionné** : au repos, le panneau liste chaque voiture du garage avec son pourcentage **sur le circuit affiché** ; changer de circuit dans la vitrine change les pourcentages (« 0.0 % (jamais entraînée ici) » sur un circuit inconnu).
 - Le garage liste les circuits validés par chaque lignée ; la vitrine donne la confiance de chaque voiture sur chaque circuit.
 - Parcours d'entraînement : un niveau déjà validé par une lignée est sauté pour elle ; si toutes l'ont validé, on passe directement au niveau suivant.
 
@@ -123,7 +132,7 @@ Menu du jeu, « Longueur des rayons » : curseur de 40 à 300 px (≈ 13 à 95 m
 
 ## Niveaux d'entraînement (`training-circuits-data.js`, `curriculum.js`)
 
-La liste déroulante « Circuit » contient les circuits F1 puis les niveaux. Chaque niveau travaille une compétence et se valide en **1 tour** :
+La vitrine des circuits présente les circuits F1 puis les niveaux. Chaque niveau travaille une compétence et se valide en **1 tour** :
 
 | Niveau | Compétence |
 |---|---|
@@ -133,7 +142,7 @@ La liste déroulante « Circuit » contient les circuits F1 puis les niveaux. Ch
 | 4 – Épingles aller-retour | demi-tours serrés dans un sens puis dans l'autre |
 | 5 – Passage coincé | piste étroite (10 m au lieu de 14 m) et chicanes serrées |
 
-- Un niveau choisi à la main dans la liste s'entraîne comme un circuit normal (1 tour pour terminer).
+- Un niveau choisi à la main dans la vitrine des circuits s'entraîne comme un circuit normal (1 tour pour terminer).
 - **« Faire entraîner la voiture dans des circuits d'entraînement »** : les modèles cochés partent du niveau 1 (depuis leur dernier champion du garage s'il existe). Une lignée valide un niveau quand le meilleur d'une génération boucle le tour. Quand **toutes** les lignées l'ont validé, le circuit change automatiquement pour le niveau suivant ; la génération suivante y part du champion.
 - Après le niveau 5, le garage marque les lignées « entraînées sur les circuits d'entraînement » et une **démonstration** démarre sur le circuit F1 choisi avant : un champion par lignée roule avec la légende « Gén. N – voiture entraînée sur les circuits d'entraînement » sous la voiture (la course recommence en boucle, « Arrêter » la termine).
 - La voiture garde sa taille F1 sur tous les niveaux (échelle fixe 3,14 px/m) ; seule la piste du niveau 5 est plus étroite.
@@ -178,7 +187,7 @@ Une configuration invalide est refusée avec un message (affiché dans le menu).
 
 ## Fichiers
 
-`vehicle.js` (base protégée), `car.js` (`Car extends Vehicle`), `network-config.js`, `neural-network.js`, `architecture.js`, `confidence.js`, `evolution.js`, `training-circuits-data.js`, `curriculum.js`, `garage.js`, `network.html` + `network-viewer.js`, `ray.js`, `sensor-settings.js`, `sim-speed.js`, `car-design.js`, `showroom.js`, `model-file.js`, `obstacle.js`, `obstacle-editor.js`, `circuit.js` (géométrie, `LapTracker`), `circuits-data.js`, `brands.js`, `random.js` (RNG à graine), `grass.js`, `track-renderer.js`, `sketch.js`.
+`vehicle.js` (base protégée), `car.js` (`Car extends Vehicle`), `network-config.js`, `neural-network.js`, `architecture.js`, `confidence.js`, `evolution.js`, `training-circuits-data.js`, `curriculum.js`, `garage.js`, `network.html` + `network-viewer.js`, `ray.js`, `sensor-settings.js`, `sim-speed.js`, `car-design.js`, `showroom.js`, `circuit-showroom.js`, `model-file.js`, `obstacle.js`, `obstacle-editor.js`, `circuit.js` (géométrie, `LapTracker`), `circuits-data.js`, `brands.js`, `random.js` (RNG à graine), `grass.js`, `track-renderer.js`, `sketch.js`.
 
 ## Tests
 
