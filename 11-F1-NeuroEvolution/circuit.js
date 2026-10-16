@@ -112,20 +112,29 @@ class Circuit {
     this.raceLaps = layout.raceLaps ?? null;
     this.skill = layout.skill ?? null;
 
-    const fitted = Circuit.fitToCanvas(layout.points, canvasWidth, canvasHeight, margin + this.trackWidth / 2);
+    // Taille du tracé : il remplit le canvas, ou seulement une part de sa
+    // surface (areaRatio, ex. 1/4 pour les niveaux d'entraînement), centré.
+    this.areaRatio = Circuit.validAreaRatio(layout.areaRatio);
+    const fitted = Circuit.fitToCanvas(layout.points, canvasWidth, canvasHeight, margin + this.trackWidth / 2, Math.sqrt(this.areaRatio));
     this.center = resampleClosed(catmullRomClosed(fitted, 12), spacing);
     this.buildEdges();
     this.buildArcLengths();
     this.buildWallGrid(80);
   }
 
-  static fitToCanvas(points, w, h, margin) {
+  // areaRatio dans ]0, 1] ; absent ou invalide → 1 (tout le canvas).
+  static validAreaRatio(areaRatio) {
+    return Number.isFinite(areaRatio) && areaRatio > 0 && areaRatio <= 1 ? areaRatio : 1;
+  }
+
+  // sizeFactor : facteur linéaire (0,5 → surface divisée par 4), tracé centré.
+  static fitToCanvas(points, w, h, margin, sizeFactor = 1) {
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     for (const [x, y] of points) {
       minX = Math.min(minX, x); maxX = Math.max(maxX, x);
       minY = Math.min(minY, y); maxY = Math.max(maxY, y);
     }
-    const scale = Math.min((w - 2 * margin) / (maxX - minX), (h - 2 * margin) / (maxY - minY));
+    const scale = Math.min((w - 2 * margin) / (maxX - minX), (h - 2 * margin) / (maxY - minY)) * sizeFactor;
     const offX = (w - (maxX - minX) * scale) / 2;
     const offY = (h - (maxY - minY) * scale) / 2;
     return points.map(([x, y]) => [(x - minX) * scale + offX, (y - minY) * scale + offY]);

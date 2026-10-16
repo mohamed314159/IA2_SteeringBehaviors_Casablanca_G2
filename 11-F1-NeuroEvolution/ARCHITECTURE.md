@@ -26,7 +26,7 @@ Règle de mise à jour : chaque nouvelle demande est ajoutée à la pile sous la
 | 16 | Vitrine des obstacles : obstacles dessinés enregistrés comme prototypes (`proto_1`, `proto_2`…), obstacles de série déjà dessinés, placement depuis la vitrine, placement aléatoire (types et nombres choisis dans la vitrine) | **DONE** |
 | 17 | Bouton en haut à droite de l'écran : retirer le décor d'herbe pour un rendu plus léger | **DONE** |
 | 18 | Effet de flammes sur la ligne d'arrivée quand une voiture la franchit | **DONE** |
-| 19 | Circuits d'entraînement actuels plus petits : surface divisée par 4 | à faire |
+| 19 | Circuits d'entraînement actuels plus petits : surface divisée par 4 | **DONE** |
 | 20 | 5 nouveaux circuits d'entraînement pour les bases de la course (drift à gauche, drift à droite…) | à faire |
 | 21 | Plus de circuits de Formule 1 | à faire |
 | 22 | Designs de voitures plus faciles à distinguer (deux voitures rouges de marques différentes se ressemblent trop) | à faire |
@@ -129,6 +129,11 @@ Règle de mise à jour : chaque nouvelle demande est ajoutée à la pile sous la
 ### Étape 18 – Flammes sur la ligne d'arrivée — **DONE**
 - `FinishFlames` (`finish-flames.js`) : effet décoratif, pas un véhicule. Particules nées sur la ligne (bord gauche → bord droit au point de départ), montant vers le haut de l'écran, jaune → orange → rouge → transparent, dessin additif isolé par `push()` / `pop()`.
 - Détection à chaque pas de simulation (un tour de plus selon `LapTracker`, jamais recompté), avant le remplacement des lignées ; animation une fois par image, donc indépendante de l'accélération. Émission 40 images, plafond 400 particules, extinction au changement de circuit.
+
+### Étape 19 – Niveaux d'entraînement plus petits — **DONE**
+- Nouveau champ de tracé `areaRatio` (part de la surface du canvas, ]0, 1], 1 par défaut) : `Circuit.fitToCanvas` applique le facteur linéaire √areaRatio en gardant le tracé centré. Niveaux : `TRAINING_AREA_RATIO` = 1/4 ; circuits F1 inchangés.
+- Même largeur de piste et même voiture : slalom (amplitude 5 → 4) et épingles (5 → 3 demi-tours plus larges) redessinés pour éviter les croisements de bords.
+- Les validations « entraînée » déjà mémorisées au garage pour ces niveaux datent des anciens tracés (même identifiant de circuit).
 
 ## 2. Modèle (Reynolds)
 

@@ -26,7 +26,7 @@ Le détail de chaque étape et l'architecture du projet sont dans [ARCHITECTURE.
 | 16 | Vitrine des obstacles : obstacles de série, prototypes dessinés (`proto_1`, `proto_2`…), placement depuis la vitrine ou au hasard (types et nombres choisis) | ✅ |
 | 17 | Bouton en haut à droite : retirer le décor d'herbe (rendu plus léger) | ✅ |
 | 18 | Flammes sur la ligne d'arrivée quand une voiture la franchit | ✅ |
-| 19 | Circuits d'entraînement actuels plus petits : surface divisée par 4 | à faire |
+| 19 | Circuits d'entraînement actuels plus petits : surface divisée par 4 | ✅ |
 | 20 | 5 nouveaux circuits d'entraînement pour les bases de la course (drift à gauche, drift à droite…) | à faire |
 | 21 | Plus de circuits de Formule 1 | à faire |
 | 22 | Designs de voitures plus faciles à distinguer (deux voitures rouges de marques différentes se ressemblent trop) | à faire |
@@ -209,9 +209,10 @@ La vitrine des circuits présente les circuits F1 puis les niveaux. Chaque nivea
 - **« Parcours d'entraînement (5 niveaux) »** : les voitures sélectionnées partent du niveau 1 (depuis leur dernier champion du garage s'il existe). Une lignée valide un niveau quand le meilleur d'une génération boucle le tour. Quand **toutes** les lignées l'ont validé, le circuit change automatiquement pour le niveau suivant ; la génération suivante y part du champion.
 - Après le niveau 5, le garage marque les lignées « entraînées sur les circuits d'entraînement » et une **démonstration** démarre sur le circuit F1 choisi avant : un champion par lignée roule avec la légende « Gén. N – voiture entraînée sur les circuits d'entraînement » sous la voiture (la course recommence en boucle, « Arrêter » la termine).
 - La voiture garde sa taille F1 sur tous les niveaux (échelle fixe 3,14 px/m) ; seule la piste du niveau 5 est plus étroite.
-- Ajouter un niveau : une entrée dans `TRAINING_CIRCUITS` (champs `level`, `skill`, `raceLaps`, `points`, `trackWidthMeters` facultatif) ; les tests vérifient qu'elle est valide.
+- **Taille (étape 19)** : chaque niveau occupe **1/4 de la surface** qu'il occupait avant (`areaRatio: TRAINING_AREA_RATIO`, soit 1/4 ; tracé 2 fois plus petit dans chaque direction, centré sur le canvas, tour 2 fois plus court). La surface est mesurée sur la boîte englobante de la ligne médiane. La largeur de piste et la voiture ne changent pas, donc les virages sont plus serrés. Pour que les bords ne se croisent pas, deux tracés ont été redessinés : le slalom garde 2 ondulations mais avec une amplitude de 4 au lieu de 5, et les épingles passent de 5 à 3 demi-tours plus larges. Les tests vérifient le quart de surface (±10 % pour ces deux tracés redessinés), l'absence de croisement et au moins 20 px entre deux portions du tracé.
+- Ajouter un niveau : une entrée dans `TRAINING_CIRCUITS` (champs `level`, `skill`, `raceLaps`, `points`, `areaRatio`, `trackWidthMeters` facultatif) ; les tests vérifient qu'elle est valide.
 
-Mesure de l'étape 4 (2 lignées, graine fixe) : parcours complet terminé en 39 générations.
+Mesure de l'étape 4 (2 lignées, graine fixe, tracés d'avant l'étape 19) : parcours complet terminé en 39 générations.
 
 ## Architecture du réseau depuis l'interface (`network.html`, `architecture.js`)
 

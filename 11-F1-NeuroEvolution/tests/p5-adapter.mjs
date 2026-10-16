@@ -95,7 +95,7 @@ export function loadExample(files = SCRIPTS, globals = {}) {
     allCircuitEntries, circuitLayout, thumbnailScale, circuitCardInfo, drawTrackThumbnail,
     CIRCUIT_THUMB_WIDTH, CIRCUIT_THUMB_HEIGHT, CONFIDENCE_START, CONFIDENCE_MIN, CONFIDENCE_MAX,
 
-    TRAINING_CIRCUITS, trainingLevelKeys, Curriculum,
+    TRAINING_CIRCUITS, TRAINING_AREA_RATIO, trainingLevelKeys, Curriculum,
     DEFAULT_RAY_LENGTH, MIN_RAY_LENGTH, MAX_RAY_LENGTH, RAY_LENGTH_STORAGE_KEY,
     currentRayLength, setRayLength, loadRayLength, saveRayLength,
     ARCHITECTURE_STORAGE_KEY, MAX_HIDDEN_LAYERS, currentNetworkConfig, architectureOf,
