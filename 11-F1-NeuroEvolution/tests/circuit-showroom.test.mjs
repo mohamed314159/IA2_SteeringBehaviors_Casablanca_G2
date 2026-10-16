@@ -13,7 +13,9 @@ test("la vitrine propose tous les circuits : F1 puis niveaux dans l'ordre", () =
   assert.deepEqual(plain(entries.map((e) => e.key)), [
     "monza", "spa", "interlagos", "silverstone", "monaco", "montreal", "redBullRing", "hungaroring",
     "niveau-1-circulaire", "niveau-2-carre", "niveau-3-drift", "niveau-4-epingles", "niveau-5-coince",
-    "niveau-6-drift-gauche", "niveau-7-drift-droite", "niveau-8-freinage", "niveau-9-virage-qui-se-referme", "niveau-10-haricot"
+    "niveau-6-drift-gauche", "niveau-7-drift-droite", "niveau-8-freinage", "niveau-9-virage-qui-se-referme", "niveau-10-haricot",
+    "niveau-11-serpent", "niveau-12-coeur", "niveau-13-poisson", "niveau-14-chateau", "niveau-15-os",
+    "niveau-16-trefle", "niveau-17-etoile", "niveau-18-montagnes", "niveau-19-croissant", "niveau-20-labyrinthe"
   ]);
   assert.deepEqual(plain([...new Set(entries.map((e) => e.group))]), ["Formule 1", "Niveaux d'entraînement"]);
   for (const entry of entries) assert.equal(ex.circuitLayout(entry.key), entry.layout);

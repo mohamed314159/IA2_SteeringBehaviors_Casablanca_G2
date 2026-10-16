@@ -61,6 +61,69 @@ function mirrorX(points) {
   return points.map(([x, y]) => [100 - x, y]);
 }
 
+// Polygone aux coins arrondis (étape 25) : chaque coin est remplacé par une courbe
+// de Bézier quadratique qui commence et finit à `cut` du coin (au plus 45 % des côtés).
+function roundCorners(points, cut, steps = 4) {
+  const n = points.length;
+  const rounded = [];
+  for (let i = 0; i < n; i++) {
+    const [px, py] = points[i];
+    const [ax, ay] = points[(i - 1 + n) % n];
+    const [bx, by] = points[(i + 1) % n];
+    const lenA = Math.hypot(ax - px, ay - py);
+    const lenB = Math.hypot(bx - px, by - py);
+    const tA = Math.min(cut, 0.45 * lenA) / lenA;
+    const tB = Math.min(cut, 0.45 * lenB) / lenB;
+    const start = [px + (ax - px) * tA, py + (ay - py) * tA];
+    const end = [px + (bx - px) * tB, py + (by - py) * tB];
+    for (let s = 0; s <= steps; s++) {
+      const t = s / steps;
+      const u = 1 - t;
+      rounded.push([
+        u * u * start[0] + 2 * u * t * px + t * t * end[0],
+        u * u * start[1] + 2 * u * t * py + t * t * end[1]
+      ]);
+    }
+  }
+  return rounded;
+}
+
+// Points de contrôle régulièrement espacés (au plus maxStep entre deux) : la spline de
+// Catmull-Rom déborde et fait des boucles quand des points serrés suivent un long côté.
+function densify(points, maxStep = 2.5) {
+  const dense = [];
+  for (let i = 0; i < points.length; i++) {
+    const [ax, ay] = points[i];
+    const [bx, by] = points[(i + 1) % points.length];
+    const parts = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay) / maxStep));
+    for (let k = 0; k < parts; k++) dense.push([ax + ((bx - ax) * k) / parts, ay + ((by - ay) * k) / parts]);
+  }
+  return dense;
+}
+
+// Courbe polaire r = base + bump × cos(lobes × angle), parcourue dans le sens horaire :
+// des lobes (virages à droite) séparés par des creux (virages à gauche).
+function lobePoints(cx, cy, base, bump, lobes, count, stretchX = 1) {
+  const points = [];
+  for (let i = 0; i < count; i++) {
+    const a = (i / count) * Math.PI * 2 - Math.PI / 2;
+    const r = base + bump * Math.cos(lobes * (a + Math.PI / 2));
+    points.push([cx + stretchX * r * Math.cos(a), cy + r * Math.sin(a)]);
+  }
+  return points;
+}
+
+// Étoile : sommets alternés entre le rayon extérieur (pointes) et intérieur (creux), sens horaire.
+function starPoints(cx, cy, outer, inner, branches, stretchX = 1) {
+  const points = [];
+  for (let i = 0; i < branches * 2; i++) {
+    const a = (i / (branches * 2)) * Math.PI * 2 - Math.PI / 2;
+    const r = i % 2 === 0 ? outer : inner;
+    points.push([cx + stretchX * r * Math.cos(a), cy + r * Math.sin(a)]);
+  }
+  return points;
+}
+
 // Drift à gauche : ligne droite qui descend, puis une grande courbe à gauche (forme de D).
 const DRIFT_LEFT_POINTS = [[14, 12], [14, 30], [14, 48], ...arcPoints(30, 30, 62, 24, 100, -100, 14)];
 
@@ -184,6 +247,125 @@ const TRAINING_CIRCUITS = {
       [28, 8], [50, 20], [72, 8], [90, 16], [94, 32], [86, 48],
       [66, 54], [50, 52], [34, 54], [14, 48], [6, 32], [10, 16]
     ]
+  },
+
+  // ---------- Niveaux complexes à thèmes (étape 25) ----------
+  "niveau-11-serpent": {
+    name: "Niveau 11 – Le Serpent",
+    level: 11,
+    skill: "cinq épingles alternées (droite, gauche…) sans ligne droite pour se reposer",
+    raceLaps: 1,
+    areaRatio: TRAINING_AREA_RATIO,
+    points: densify([
+      [6, 54], [6, 30], [6, 10],
+      ...arcPoints(13.5, 10, 7.5, 8, 180, 360, 6).slice(1, -1),
+      [21, 10], [21, 24], [21, 36],
+      ...arcPoints(28.5, 36, 7.5, 8, 180, 0, 6).slice(1, -1),
+      [36, 36], [36, 24], [36, 10],
+      ...arcPoints(43.5, 10, 7.5, 8, 180, 360, 6).slice(1, -1),
+      [51, 10], [51, 24], [51, 36],
+      ...arcPoints(58.5, 36, 7.5, 8, 180, 0, 6).slice(1, -1),
+      [66, 36], [66, 24], [66, 10],
+      ...arcPoints(73.5, 10, 7.5, 8, 180, 360, 6).slice(1, -1),
+      [81, 10], [81, 30],
+      ...arcPoints(75, 54, 6, 6, 0, 90, 4),
+      [56, 60], [31, 60],
+      ...arcPoints(12, 54, 6, 6, 90, 180, 4)
+    ])
+  },
+  "niveau-12-coeur": {
+    name: "Niveau 12 – Le Cœur",
+    level: 12,
+    skill: "deux grandes courbes à droite, une pointe en V en bas et un creux serré à gauche en haut",
+    raceLaps: 1,
+    areaRatio: TRAINING_AREA_RATIO,
+    points: densify(roundCorners([
+      [50, 18], [56, 9], [66, 3], [78, 2], [90, 7], [96, 18], [94, 30], [84, 42], [68, 52], [50, 60],
+      [32, 52], [16, 42], [6, 30], [4, 18], [10, 7], [22, 2], [34, 3], [44, 9]
+    ], 6))
+  },
+  "niveau-13-poisson": {
+    name: "Niveau 13 – Le Poisson",
+    level: 13,
+    skill: "grand tour du corps à droite, puis la queue : deux nageoires aux virages aigus et un creux à gauche",
+    raceLaps: 1,
+    areaRatio: TRAINING_AREA_RATIO,
+    points: densify(roundCorners([
+      ...arcPoints(64, 30, 32, 26, -150, 150, 40),
+      [8, 58], [8, 44], [22, 30], [8, 16], [8, 2]
+    ], 5))
+  },
+  "niveau-14-chateau": {
+    name: "Niveau 14 – Le Château fort",
+    level: 14,
+    skill: "créneaux : demi-tours à angles droits qui alternent droite et gauche tous les 14 m",
+    raceLaps: 1,
+    areaRatio: TRAINING_AREA_RATIO,
+    points: densify(roundCorners([
+      [4, 56], [4, 4], [16, 4], [16, 18], [30, 18], [30, 4], [44, 4], [44, 18],
+      [58, 18], [58, 4], [72, 4], [72, 18], [86, 18], [86, 4], [98, 4], [98, 56]
+    ], 5))
+  },
+  "niveau-15-os": {
+    name: "Niveau 15 – L'Os",
+    level: 15,
+    skill: "deux grands demi-tours à droite reliés par un passage étroit qui fait tourner à gauche",
+    raceLaps: 1,
+    areaRatio: TRAINING_AREA_RATIO,
+    points: densify([
+      [40, 22], [60, 22],
+      ...arcPoints(82, 30, 16, 28, -150, 150, 30),
+      [60, 38], [40, 38],
+      ...arcPoints(18, 30, 16, 28, 30, 330, 30)
+    ])
+  },
+  "niveau-16-trefle": {
+    name: "Niveau 16 – Le Trèfle à quatre feuilles",
+    level: 16,
+    skill: "quatre lobes : courbes à droite et creux à gauche qui reviennent sans cesse",
+    raceLaps: 1,
+    areaRatio: TRAINING_AREA_RATIO,
+    points: densify(lobePoints(50, 30, 22, 6, 4, 48, 1.6))
+  },
+  "niveau-17-etoile": {
+    name: "Niveau 17 – L'Étoile",
+    level: 17,
+    skill: "cinq pointes : grands virages à droite au bout de chaque branche, creux à gauche entre elles",
+    raceLaps: 1,
+    areaRatio: TRAINING_AREA_RATIO,
+    points: densify(roundCorners(starPoints(50, 30, 30, 18, 5, 1.5), 8))
+  },
+  "niveau-18-montagnes": {
+    name: "Niveau 18 – Les Montagnes",
+    level: 18,
+    skill: "trois sommets et deux vallées : virages en pointe à droite et à gauche, puis longue ligne droite",
+    raceLaps: 1,
+    areaRatio: TRAINING_AREA_RATIO,
+    points: densify(roundCorners([
+      [4, 58], [4, 36], [19, 8], [34, 36], [49, 4], [64, 32], [80, 10], [96, 38], [96, 58]
+    ], 9))
+  },
+  "niveau-19-croissant": {
+    name: "Niveau 19 – Le Croissant de lune",
+    level: 19,
+    skill: "longue courbe à droite, épingle à la pointe, longue courbe à gauche, épingle",
+    raceLaps: 1,
+    areaRatio: TRAINING_AREA_RATIO,
+    points: densify(roundCorners([
+      ...arcPoints(56, 30, 44, 29, 120, 240, 12),
+      ...arcPoints(72, 30, 30, 22, 230, 130, 10)
+    ], 10))
+  },
+  "niveau-20-labyrinthe": {
+    name: "Niveau 20 – Le Labyrinthe",
+    level: 20,
+    skill: "examen final : couloirs à angles droits, impasses apparentes et virages dans les deux sens",
+    raceLaps: 1,
+    areaRatio: TRAINING_AREA_RATIO,
+    points: densify(roundCorners([
+      [5, 50], [5, 5], [35, 5], [35, 20], [20, 20], [20, 35], [50, 35], [50, 5],
+      [95, 5], [95, 20], [65, 20], [65, 35], [95, 35], [95, 50]
+    ], 5))
   }
 };
 

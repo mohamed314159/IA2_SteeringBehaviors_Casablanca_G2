@@ -32,6 +32,7 @@ Règle de mise à jour : chaque nouvelle demande est ajoutée à la pile sous la
 | 22 | Designs de voitures plus faciles à distinguer (deux voitures rouges de marques différentes se ressemblent trop) | **DONE** |
 | 23 | Longueur des rayons : plage bien plus grande que 300 px, maximum = largeur de l'écran | **DONE** |
 | 24 | Bouton vert renommé « Déploiement » et agrandi ; tailles des boutons du menu harmonisées | **DONE** |
+| 25 | 10 autres niveaux d'entraînement complexes à thèmes | **DONE** |
 
 ### Étape 1 – Circuit, décor, marques, rayons — **DONE**
 - Trois circuits F1 stylisés (Monza, Spa, Interlagos) lissés par Catmull-Rom ; bords sans croisement vérifiés par les tests.
@@ -156,6 +157,11 @@ Règle de mise à jour : chaque nouvelle demande est ajoutée à la pile sous la
 ### Étape 24 – Bouton « Déploiement » et boutons harmonisés — **DONE**
 - Le bouton du parcours d'entraînement s'appelle « Déploiement » (nombre de niveaux en petit dessous) : 21 px, 64 px de haut, dégradé vert et ombre.
 - Boutons ordinaires du menu : `box-sizing: border-box`, hauteur minimale commune de 42 px, libellé centré ; vitesses en grille de 4 colonnes ; espacement entre les groupes.
+
+### Étape 25 – 10 niveaux complexes à thèmes — **DONE**
+- Niveaux 11 à 20 dans `training-circuits-data.js` : Serpent, Cœur, Poisson, Château fort, Os, Trèfle à quatre feuilles, Étoile, Montagnes, Croissant de lune, Labyrinthe ; quart de surface, piste de 14 m, 1 tour. Le parcours « Déploiement » compte 20 niveaux.
+- Aides de tracé : `roundCorners`, `densify`, `starPoints`, `lobePoints` ; aucun changement de `circuit.js`.
+- `tests/training-themes.test.mjs` : validité (bords, canvas, rayon ≥ 9 px), complexité (≥ 1,5 tour de volant, ≥ 15 % à gauche), épingles du Serpent et du Château, angles droits du Labyrinthe, symétries, aides, départ d'une voiture.
 
 ## 2. Modèle (Reynolds)
 
