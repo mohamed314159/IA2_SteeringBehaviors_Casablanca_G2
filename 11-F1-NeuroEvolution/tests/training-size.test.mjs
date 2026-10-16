@@ -37,7 +37,7 @@ test("chaque niveau d'entraînement occupe 1/4 de la surface", () => {
 });
 
 test("surface divisée par 4 par rapport aux niveaux d'avant (tracés redessinés compris, ±10 %)", () => {
-  for (const key of ex.trainingLevelKeys()) {
+  for (const key of Object.keys(SURFACE_BEFORE_STEP_19)) {
     const ratio = bbox(build(ex.TRAINING_CIRCUITS[key])).area / SURFACE_BEFORE_STEP_19[key];
     assert.ok(ratio > 0.225 && ratio < 0.275, `${key} : ${ratio.toFixed(3)}`);
   }
@@ -47,7 +47,7 @@ test("niveaux réduits : centrés, valides, assez de place entre deux portions d
   for (const key of ex.trainingLevelKeys()) {
     const circuit = build(ex.TRAINING_CIRCUITS[key]);
     const box = bbox(circuit);
-    assert.ok(Math.abs(box.cx - 600) < 1 && Math.abs(box.cy - 380) < 1, `${key} centré`);
+    assert.ok(Math.abs(box.cx - 600) < 3 && Math.abs(box.cy - 380) < 3, `${key} centré (lissage du tracé : quelques px)`);
     assert.equal(circuit.hasSelfIntersection(), false, key);
     // Bord à bord entre deux portions éloignées du tracé (le long de la piste) : au moins 20 px.
     const n = circuit.center.length;

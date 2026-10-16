@@ -27,7 +27,7 @@ Règle de mise à jour : chaque nouvelle demande est ajoutée à la pile sous la
 | 17 | Bouton en haut à droite de l'écran : retirer le décor d'herbe pour un rendu plus léger | **DONE** |
 | 18 | Effet de flammes sur la ligne d'arrivée quand une voiture la franchit | **DONE** |
 | 19 | Circuits d'entraînement actuels plus petits : surface divisée par 4 | **DONE** |
-| 20 | 5 nouveaux circuits d'entraînement pour les bases de la course (drift à gauche, drift à droite…) | à faire |
+| 20 | 5 nouveaux circuits d'entraînement pour les bases de la course (drift à gauche, drift à droite…) | **DONE** |
 | 21 | Plus de circuits de Formule 1 | à faire |
 | 22 | Designs de voitures plus faciles à distinguer (deux voitures rouges de marques différentes se ressemblent trop) | à faire |
 | 23 | Longueur des rayons : plage bien plus grande que 300 px, maximum = largeur de l'écran | à faire |
@@ -134,6 +134,11 @@ Règle de mise à jour : chaque nouvelle demande est ajoutée à la pile sous la
 - Nouveau champ de tracé `areaRatio` (part de la surface du canvas, ]0, 1], 1 par défaut) : `Circuit.fitToCanvas` applique le facteur linéaire √areaRatio en gardant le tracé centré. Niveaux : `TRAINING_AREA_RATIO` = 1/4 ; circuits F1 inchangés.
 - Même largeur de piste et même voiture : slalom (amplitude 5 → 4) et épingles (5 → 3 demi-tours plus larges) redessinés pour éviter les croisements de bords.
 - Les validations « entraînée » déjà mémorisées au garage pour ces niveaux datent des anciens tracés (même identifiant de circuit).
+
+### Étape 20 – Bases de la course : 5 nouveaux niveaux — **DONE**
+- Niveaux 6 à 10, à la suite des 5 premiers : drift à gauche (tracé en D anti-horaire), drift à droite (miroir, `mirrorX`), freinage avant l'épingle, virage qui se referme (`spiralPoints`, rayon 24 → 12), haricot (droite puis gauche).
+- Tous à 1/4 de surface, piste de 14 m, 1 tour ; tracés validés numériquement (pas de croisement, rayon minimal > demi-largeur de piste, ≥ 20 px entre deux portions).
+- Le parcours d'entraînement enchaîne les 10 niveaux ; le libellé du bouton est calculé d'après `trainingLevelKeys()`.
 
 ## 2. Modèle (Reynolds)
 

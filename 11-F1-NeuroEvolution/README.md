@@ -27,7 +27,7 @@ Le détail de chaque étape et l'architecture du projet sont dans [ARCHITECTURE.
 | 17 | Bouton en haut à droite : retirer le décor d'herbe (rendu plus léger) | ✅ |
 | 18 | Flammes sur la ligne d'arrivée quand une voiture la franchit | ✅ |
 | 19 | Circuits d'entraînement actuels plus petits : surface divisée par 4 | ✅ |
-| 20 | 5 nouveaux circuits d'entraînement pour les bases de la course (drift à gauche, drift à droite…) | à faire |
+| 20 | 5 nouveaux circuits d'entraînement pour les bases de la course (drift à gauche, drift à droite…) | ✅ |
 | 21 | Plus de circuits de Formule 1 | à faire |
 | 22 | Designs de voitures plus faciles à distinguer (deux voitures rouges de marques différentes se ressemblent trop) | à faire |
 | 23 | Longueur des rayons : plage bien plus grande que 300 px, maximum = largeur de l'écran | à faire |
@@ -49,7 +49,7 @@ De haut en bas :
 1. **Lignées en piste** : un résumé (générations terminées, voitures en piste, vitesse atteinte, niveau du parcours, dernier message) puis une fiche par lignée. Au repos, les voitures du garage avec leur pourcentage sur le circuit actuel.
 2. **Circuit : …** (ouvre la vitrine des circuits) et **Voitures : …** (ouvre la vitrine des voitures). Le nom du circuit et le nombre de voitures sélectionnées sont écrits dans les boutons.
 3. **Réseau de neurones : 6 → 20 → 2** (ouvre `network.html`) et **Rayons : 5 · longueur 160 px** (ouvre l'éditeur de rayons).
-4. **Entraîner sur ce circuit**, **Arrêter**, **Parcours d'entraînement (5 niveaux)**.
+4. **Entraîner sur ce circuit**, **Arrêter**, **Parcours d'entraînement (10 niveaux)** (nombre calculé d'après les niveaux existants).
 5. Vitesse de simulation **×1 … ×100, max**, **Rayons du leader : affichés / masqués**.
 6. **Vitrine des obstacles**, **Obstacles au hasard**, **Retirer un obstacle**, **Retirer tous**.
 
@@ -204,10 +204,17 @@ La vitrine des circuits présente les circuits F1 puis les niveaux. Chaque nivea
 | 3 – Drift (slalom) | enchaîner les changements de direction à vitesse élevée |
 | 4 – Épingles aller-retour | demi-tours serrés dans un sens puis dans l'autre |
 | 5 – Passage coincé | piste étroite (10 m au lieu de 14 m) et chicanes serrées |
+| 6 – Drift à gauche | longue courbe à gauche à vitesse élevée : tracé en D parcouru dans le sens anti-horaire, tous les virages à gauche |
+| 7 – Drift à droite | le miroir du niveau 6 : tous les virages à droite |
+| 8 – Freinage avant l'épingle | deux longues lignes droites (plus de la moitié du tour) terminées par un demi-tour : freiner fort, tourner, réaccélérer |
+| 9 – Virage qui se referme | ligne droite puis virage dont le rayon diminue de moitié (24 → 12 dans le repère du tracé) : entrer vite puis ralentir dans le virage |
+| 10 – Haricot (droite puis gauche) | tracé surtout à droite avec une courbe à gauche dans chaque creux : changer de côté |
+
+Les niveaux 6 à 10 (étape 20) travaillent les bases de la course. Ils ont la même taille réduite (1/4 de la surface), la même piste de 14 m, et se valident en 1 tour. Ils s'ajoutent à la suite des niveaux 1 à 5 : le parcours d'entraînement compte donc 10 niveaux. Les tests vérifient le sens réel des virages (≥ 95 % à gauche pour le niveau 6, à droite pour le 7), la part de ligne droite du freinage, la diminution du rayon au niveau 9 et la part de virage à gauche du haricot.
 
 - Un niveau choisi à la main dans la vitrine des circuits s'entraîne comme un circuit normal (1 tour pour terminer).
-- **« Parcours d'entraînement (5 niveaux) »** : les voitures sélectionnées partent du niveau 1 (depuis leur dernier champion du garage s'il existe). Une lignée valide un niveau quand le meilleur d'une génération boucle le tour. Quand **toutes** les lignées l'ont validé, le circuit change automatiquement pour le niveau suivant ; la génération suivante y part du champion.
-- Après le niveau 5, le garage marque les lignées « entraînées sur les circuits d'entraînement » et une **démonstration** démarre sur le circuit F1 choisi avant : un champion par lignée roule avec la légende « Gén. N – voiture entraînée sur les circuits d'entraînement » sous la voiture (la course recommence en boucle, « Arrêter » la termine).
+- **« Parcours d'entraînement (10 niveaux) »** : les voitures sélectionnées partent du niveau 1 (depuis leur dernier champion du garage s'il existe). Une lignée valide un niveau quand le meilleur d'une génération boucle le tour. Quand **toutes** les lignées l'ont validé, le circuit change automatiquement pour le niveau suivant ; la génération suivante y part du champion.
+- Après le dernier niveau (10), le garage marque les lignées « entraînées sur les circuits d'entraînement » et une **démonstration** démarre sur le circuit F1 choisi avant : un champion par lignée roule avec la légende « Gén. N – voiture entraînée sur les circuits d'entraînement » sous la voiture (la course recommence en boucle, « Arrêter » la termine).
 - La voiture garde sa taille F1 sur tous les niveaux (échelle fixe 3,14 px/m) ; seule la piste du niveau 5 est plus étroite.
 - **Taille (étape 19)** : chaque niveau occupe **1/4 de la surface** qu'il occupait avant (`areaRatio: TRAINING_AREA_RATIO`, soit 1/4 ; tracé 2 fois plus petit dans chaque direction, centré sur le canvas, tour 2 fois plus court). La surface est mesurée sur la boîte englobante de la ligne médiane. La largeur de piste et la voiture ne changent pas, donc les virages sont plus serrés. Pour que les bords ne se croisent pas, deux tracés ont été redessinés : le slalom garde 2 ondulations mais avec une amplitude de 4 au lieu de 5, et les épingles passent de 5 à 3 demi-tours plus larges. Les tests vérifient le quart de surface (±10 % pour ces deux tracés redessinés), l'absence de croisement et au moins 20 px entre deux portions du tracé.
 - Ajouter un niveau : une entrée dans `TRAINING_CIRCUITS` (champs `level`, `skill`, `raceLaps`, `points`, `areaRatio`, `trackWidthMeters` facultatif) ; les tests vérifient qu'elle est valide.

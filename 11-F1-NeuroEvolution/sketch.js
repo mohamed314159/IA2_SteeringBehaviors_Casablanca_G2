@@ -97,6 +97,7 @@ function bindMenu() {
   });
   ui.trainButton.addEventListener("click", startTraining);
   ui.stopButton.addEventListener("click", stopTraining);
+  ui.curriculumButton.textContent = `Parcours d'entraînement (${trainingLevelKeys().length} niveaux)`;
   ui.curriculumButton.addEventListener("click", startCurriculum);
   updateButtons();
 }
