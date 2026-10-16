@@ -30,7 +30,7 @@ Le détail de chaque étape et l'architecture du projet sont dans [ARCHITECTURE.
 | 20 | 5 nouveaux circuits d'entraînement pour les bases de la course (drift à gauche, drift à droite…) | ✅ |
 | 21 | Plus de circuits de Formule 1 (8 au total), épingles très serrées | ✅ |
 | 22 | Designs de voitures plus faciles à distinguer (deux voitures rouges de marques différentes se ressemblent trop) | ✅ |
-| 23 | Longueur des rayons : plage bien plus grande que 300 px, maximum = largeur de l'écran | à faire |
+| 23 | Longueur des rayons : plage bien plus grande que 300 px, maximum = largeur de l'écran | ✅ |
 
 ## Lancement
 
@@ -190,7 +190,10 @@ Menu, « Vitesse de simulation » : boutons ×1, ×2, ×5, ×10, ×20, ×50, ×1
 
 ## Longueur des rayons (`sensor-settings.js`)
 
-Dans l'éditeur de rayons (bouton **Rayons : …** du menu), « Longueur des rayons » : curseur de 40 à 300 px (≈ 13 à 95 m à l'échelle F1), boutons − / + (pas de 10 px) et « Par défaut » (160 px ≈ 51 m). Le curseur réagit pendant le glissement et au clavier.
+Dans l'éditeur de rayons (bouton **Rayons : …** du menu), « Longueur des rayons » : curseur de 40 px jusqu'à **la largeur de l'écran** (étape 23 : par exemple 1 920 px ≈ 611 m sur un écran Full HD ; auparavant 300 px au plus), boutons − / + (pas de 10 px), « Par défaut » (160 px ≈ 51 m) et **« Largeur de l'écran »** (le maximum d'un coup). Le curseur réagit pendant le glissement et au clavier.
+
+- Le maximum est lu au chargement dans `window.screen.width`, en px CSS : le canvas est affiché à l'échelle 1, donc 1 px CSS = 1 px du jeu. Si l'écran est inconnu (par exemple dans un aperçu intégré où `screen.width` vaut 0), le maximum est la largeur du canvas, 1 200 px. Une longueur mémorisée trop grande pour l'écran actuel est ramenée au maximum.
+- Coût mesuré (3 lignées, 60 voitures) : environ 2,4 ms par pas de simulation à 160 px, contre 4,8 à 5,5 ms à 1 920 px, parce qu'un rayon long voit presque tous les murs du circuit. En mode « max », la simulation fait donc moins de pas par image. La recherche des murs est bornée aux cases occupées de la grille : un rayon qui couvre tout le circuit reçoit directement la liste complète des murs.
 
 - Réglage **commun à toutes les voitures** (il remplace l'ancienne portée tirée par modèle) ; lu à chaque image, il agit **tout de suite**, même pendant un entraînement ou une démonstration.
 - Mémorisé dans le navigateur (relu au rechargement) ; la longueur est aussi notée dans chaque champion du garage (`rayLength`).

@@ -97,7 +97,7 @@ export function loadExample(files = SCRIPTS, globals = {}) {
 
     TRAINING_CIRCUITS, TRAINING_AREA_RATIO, trainingLevelKeys, Curriculum, arcPoints, spiralPoints, mirrorX,
     DEFAULT_RAY_LENGTH, MIN_RAY_LENGTH, MAX_RAY_LENGTH, RAY_LENGTH_STORAGE_KEY,
-    currentRayLength, setRayLength, loadRayLength, saveRayLength,
+    currentRayLength, setRayLength, loadRayLength, saveRayLength, currentMaxRayLength, setMaxRayLength,
     ARCHITECTURE_STORAGE_KEY, MAX_HIDDEN_LAYERS, currentNetworkConfig, architectureOf,
     sameArchitecture, validateArchitecture, loadArchitecture, useStoredArchitecture,
     applyArchitecture, resetArchitecture,

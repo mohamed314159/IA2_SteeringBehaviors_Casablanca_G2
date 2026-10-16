@@ -45,6 +45,7 @@ function setup() {
   frameRate(60);
   describe("Circuit de Formule 1 vu de dessus sur de l'herbe pixelisée ; des voitures de marques parodiques, guidées par un réseau de neurones et des rayons capteurs, apprennent à faire le tour génération après génération.");
   useStoredArchitecture(safeLocalStorage());
+  setMaxRayLength(window.screen && window.screen.width);   // étape 23 : jusqu'à la largeur de l'écran
   loadRayLength(safeLocalStorage());
   speedFactor = loadSpeedFactor(safeLocalStorage());
   decor = loadDecor(safeLocalStorage());
@@ -136,7 +137,8 @@ function bindRayLength() {
   ui.rayLengthSlider = document.getElementById("rayLengthSlider");
   ui.rayLengthValue = document.getElementById("rayLengthValue");
   ui.rayLengthSlider.min = MIN_RAY_LENGTH;
-  ui.rayLengthSlider.max = MAX_RAY_LENGTH;
+  ui.rayLengthSlider.max = currentMaxRayLength();
+  document.getElementById("rayLengthMaxButton").addEventListener("click", () => changeRayLength(currentMaxRayLength()));
   ui.rayLengthSlider.addEventListener("input", () => changeRayLength(ui.rayLengthSlider.value));
   document.getElementById("rayShorterButton").addEventListener("click", () => changeRayLength(currentRayLength() - RAY_LENGTH_STEP));
   document.getElementById("rayLongerButton").addEventListener("click", () => changeRayLength(currentRayLength() + RAY_LENGTH_STEP));

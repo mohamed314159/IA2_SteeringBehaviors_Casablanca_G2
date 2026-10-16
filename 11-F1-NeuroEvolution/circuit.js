@@ -220,6 +220,8 @@ class Circuit {
   buildWallGrid(cellSize) {
     this.cellSize = cellSize;
     this.wallGrid = new Map();
+    // Cases occupées (bornes) : un très long rayon ne parcourt pas des cases vides.
+    this.gridBounds = { x0: Infinity, x1: -Infinity, y0: Infinity, y1: -Infinity };
     for (const wall of this.walls) {
       const x0 = Math.floor(Math.min(wall.a.x, wall.b.x) / cellSize);
       const x1 = Math.floor(Math.max(wall.a.x, wall.b.x) / cellSize);
@@ -229,6 +231,10 @@ class Circuit {
         for (let cy = y0; cy <= y1; cy++) {
           const key = cx + "," + cy;
           if (!this.wallGrid.has(key)) this.wallGrid.set(key, []);
+          this.gridBounds.x0 = Math.min(this.gridBounds.x0, cx);
+          this.gridBounds.x1 = Math.max(this.gridBounds.x1, cx);
+          this.gridBounds.y0 = Math.min(this.gridBounds.y0, cy);
+          this.gridBounds.y1 = Math.max(this.gridBounds.y1, cy);
           this.wallGrid.get(key).push(wall);
         }
       }
@@ -238,10 +244,13 @@ class Circuit {
   // Murs dont la cellule est à moins de `radius` de la position (sans doublon).
   wallsNear(pos, radius) {
     const found = new Set();
-    const x0 = Math.floor((pos.x - radius) / this.cellSize);
-    const x1 = Math.floor((pos.x + radius) / this.cellSize);
-    const y0 = Math.floor((pos.y - radius) / this.cellSize);
-    const y1 = Math.floor((pos.y + radius) / this.cellSize);
+    const b = this.gridBounds;
+    const x0 = Math.max(b.x0, Math.floor((pos.x - radius) / this.cellSize));
+    const x1 = Math.min(b.x1, Math.floor((pos.x + radius) / this.cellSize));
+    const y0 = Math.max(b.y0, Math.floor((pos.y - radius) / this.cellSize));
+    const y1 = Math.min(b.y1, Math.floor((pos.y + radius) / this.cellSize));
+    // Rayon couvrant toute la grille : tous les murs, sans parcourir les cases.
+    if (x0 === b.x0 && x1 === b.x1 && y0 === b.y0 && y1 === b.y1) return this.walls;
     for (let cx = x0; cx <= x1; cx++) {
       for (let cy = y0; cy <= y1; cy++) {
         const list = this.wallGrid.get(cx + "," + cy);

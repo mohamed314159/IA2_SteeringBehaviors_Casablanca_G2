@@ -30,7 +30,7 @@ Règle de mise à jour : chaque nouvelle demande est ajoutée à la pile sous la
 | 20 | 5 nouveaux circuits d'entraînement pour les bases de la course (drift à gauche, drift à droite…) | **DONE** |
 | 21 | Plus de circuits de Formule 1 | **DONE** |
 | 22 | Designs de voitures plus faciles à distinguer (deux voitures rouges de marques différentes se ressemblent trop) | **DONE** |
-| 23 | Longueur des rayons : plage bien plus grande que 300 px, maximum = largeur de l'écran | à faire |
+| 23 | Longueur des rayons : plage bien plus grande que 300 px, maximum = largeur de l'écran | **DONE** |
 
 ### Étape 1 – Circuit, décor, marques, rayons — **DONE**
 - Trois circuits F1 stylisés (Monza, Spa, Interlagos) lissés par Catmull-Rom ; bords sans croisement vérifiés par les tests.
@@ -147,6 +147,10 @@ Règle de mise à jour : chaque nouvelle demande est ajoutée à la pile sous la
 ### Étape 22 – Voitures faciles à distinguer — **DONE**
 - `brands.js` : couleur et accent propres à chaque modèle (`modelAppearance`), écart ΔE ≥ 30 entre deux modèles (testé) ; `carAppearance(spec)` relit l'apparence actuelle du modèle (voitures sauvegardées avant l'étape comprises).
 - `car-design.js` : sur le circuit, contour contrasté (`outlineColor`, luminance relative) et motif de la livrée ; pastilles de couleur du menu et de la vitrine alignées sur la couleur du modèle.
+
+### Étape 23 – Rayons jusqu'à la largeur de l'écran — **DONE**
+- `sensor-settings.js` : maximum variable (`setMaxRayLength(screen.width)`, repli 1 200 px = largeur du canvas, jamais sous 160 px), longueur ramenée dans la plage ; bouton « Largeur de l'écran » dans l'éditeur de rayons.
+- `Circuit.wallsNear` bornée aux cases occupées de la grille, et liste complète des murs quand le rayon couvre tout (mêmes murs qu'avant, testé).
 
 ## 2. Modèle (Reynolds)
 
