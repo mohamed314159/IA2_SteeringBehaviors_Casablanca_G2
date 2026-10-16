@@ -1,5 +1,6 @@
 // Vitrine des voitures : chaque modèle dessiné en grand (car-design.js), sa
-// fiche, sa sélection pour l'entraînement, et un menu « Confiance par circuit ».
+// sélection pour l'entraînement, son menu « Confiance par circuit » et, s'il est
+// au garage, « Télécharger le modèle » et « Repartir de zéro ».
 // Aucune voiture n'est sélectionnée au départ.
 const SHOWROOM_PREVIEW_WIDTH = 260;
 const SHOWROOM_PREVIEW_HEIGHT = 110;
@@ -7,8 +8,10 @@ const SHOWROOM_CAR_LENGTH = 220;   // px dans la vitrine (≈ 12 fois la taille 
 
 // ---------- Fonctions pures (testées) ----------
 
-function selectionLabel(count) {
-  return count <= 1 ? `${count} voiture sélectionnée` : `${count} voitures sélectionnées`;
+// Libellé du bouton « Voitures » du menu.
+function carsButtonLabel(count) {
+  if (count === 0) return "Voitures : aucune sélectionnée";
+  return `Voitures : ${count} sélectionnée${count > 1 ? "s" : ""}`;
 }
 
 // Tous les modèles de toutes les marques : [{ key, brand, model, brandData, modelData }].
@@ -43,17 +46,12 @@ function circuitConfidenceRows(garage, lineage, circuits) {
   });
 }
 
-// Vitesse en km/h équivalents à l'échelle F1 (60 images/s).
-function speedToKmh(pxPerFrame, pixelsPerMeter) {
-  return (pxPerFrame / pixelsPerMeter) * 60 * 3.6;
-}
-
 // ---------- Interface (navigateur) ----------
 
 class Showroom {
   // options : { dialog, grid, confidenceDialog, confidenceTitle, confidenceTable,
   //             garage: () => Garage, circuits: () => [{ key, name, group }],
-  //             pixelsPerMeter, onSelectionChange }
+  //             onSelectionChange(count), onDownload(key), onReset(key) }
   constructor(options) {
     this.options = options;
     this.selected = new Set();
@@ -101,19 +99,10 @@ class Showroom {
     drawCarDesign(g, spec, length, length * F1_CAR_WIDTH_M / F1_CAR_LENGTH_M, { detailed: true });
     g.elt.style.display = "block";
     g.elt.setAttribute("role", "img");
-    g.elt.setAttribute("aria-label", `${entry.brand} ${entry.model} vue de dessus : livrée ${modelData.livery}, numéro ${modelData.number}`);
+    g.elt.setAttribute("aria-label", `${entry.brand} ${entry.model} vue de dessus`);
 
     const title = document.createElement("h3");
     title.innerHTML = `<span class="swatch" style="background:${brandData.color}"></span>${entry.brand} <span class="model-name">${entry.model}</span>`;
-
-    const ppm = this.options.pixelsPerMeter;
-    const facts = document.createElement("p");
-    facts.className = "facts";
-    facts.innerHTML =
-      `n° ${modelData.number} · livrée ${modelData.livery}<br>` +
-      `vitesse max ${modelData.speed[0]}–${modelData.speed[1]} px/img ` +
-      `(≈ ${speedToKmh(modelData.speed[0], ppm).toFixed(0)}–${speedToKmh(modelData.speed[1], ppm).toFixed(0)} km/h)<br>` +
-      `adhérence ${modelData.grip[0].toFixed(2)}–${modelData.grip[1].toFixed(2)}`;
 
     const status = document.createElement("p");
     status.className = "status";
@@ -129,18 +118,33 @@ class Showroom {
     confidence.textContent = "Confiance par circuit";
     confidence.addEventListener("click", () => this.showConfidence(entry));
 
+    const download = document.createElement("button");
+    download.type = "button";
+    download.className = "small";
+    download.textContent = "Télécharger le modèle";
+    download.addEventListener("click", () => this.options.onDownload(entry.key));
+
+    const reset = document.createElement("button");
+    reset.type = "button";
+    reset.className = "small";
+    reset.textContent = "Repartir de zéro";
+    reset.addEventListener("click", () => {
+      this.options.onReset(entry.key);
+      this.refresh();
+    });
+
     const buttons = document.createElement("div");
-    buttons.className = "buttons";
-    buttons.append(select, confidence);
-    card.append(g.elt, title, facts, status, buttons);
+    buttons.className = "buttons wrap";
+    buttons.append(select, confidence, download, reset);
+    card.append(g.elt, title, status, buttons);
     this.options.grid.appendChild(card);
-    this.cards.set(entry.key, { card, select, status });
+    this.cards.set(entry.key, { card, select, status, download, reset });
   }
 
   // Met à jour sélection et état d'entraînement de chaque carte.
   refresh() {
     const garage = this.options.garage();
-    for (const [key, { card, select, status }] of this.cards) {
+    for (const [key, { card, select, status, download, reset }] of this.cards) {
       const isSelected = this.selected.has(key);
       card.classList.toggle("selected", isSelected);
       select.textContent = isSelected ? "Sélectionnée ✓" : "Sélectionner";
@@ -150,6 +154,8 @@ class Showroom {
       status.textContent = snapshot
         ? `gén. ${snapshot.generation} au garage · ${trained} circuit(s) validé(s)`
         : "jamais entraînée";
+      download.hidden = !snapshot;
+      reset.hidden = !snapshot;
     }
   }
 

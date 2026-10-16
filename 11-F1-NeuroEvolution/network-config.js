@@ -6,12 +6,11 @@
 // utilisent cette topologie ; une lignée sauvegardée garde la topologie avec
 // laquelle elle a été entraînée (supprimez-la du garage pour repartir de zéro).
 //
-//   Entrées  = rays + 1  (proximité de chaque rayon, puis vitesse normalisée)
+//   Entrées  = un neurone par rayon + 1 (vitesse normalisée)
 //   Cachées  = hiddenLayers (une valeur par couche)
 //   Sorties  = 2 (fixe) : direction, accélérateur
 const NETWORK_CONFIG = {
-  rays: 5,                       // nombre de rayons capteurs (1 à 15)
-  rayFovDegrees: 120,            // ouverture totale des rayons (10° à 360°)
+  rayAngles: [-60, -30, 0, 30, 60], // angle de chaque rayon (°) : 0 = devant, + = droite (1 à 15 rayons)
   hiddenLayers: [20],            // ex. [16, 8] = deux couches cachées ; [] = aucune
   hiddenActivation: "sigmoid"    // "sigmoid" | "tanh" | "relu"
 };

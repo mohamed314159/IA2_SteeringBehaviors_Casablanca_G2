@@ -1,4 +1,6 @@
-// Contrôleur de scène : circuit, choix des marques, entraînement, garage, menu.
+// Contrôleur de scène : circuit, choix des voitures, entraînement, menu.
+// Menu : lignées en piste en haut, puis uniquement des boutons ; les messages
+// s'affichent sur le circuit ou dans le résumé des lignées.
 const CANVAS_WIDTH = 1200;
 const CANVAS_HEIGHT = 760;
 const TRACK_WIDTH = 44;            // px ≈ 14 m → voiture 17,6 x 6,3 px (5,6 x 2 m)
@@ -16,7 +18,6 @@ let returnCircuitKey = "monza";    // circuit F1 affiché à la fin du parcours
 let statusMessage = "";            // message d'état (circuit validé, refus d'entraînement…)
 const DEMO_CAPTION = "voiture entraînée sur les circuits d'entraînement";
 let garage;
-let garageChoice = new Map();      // lignée → génération choisie pour reprendre (null = dernière)
 let rng = createRng(Date.now());
 let showRays = true;
 let circuitKey = "monza";
@@ -28,6 +29,9 @@ let obstacles = [];                // obstacles du circuit affiché (obstacle.js
 let obstacleWallList = [];         // leurs côtés, vus comme des murs par les rayons
 let placing = null;                // obstacle en cours de placement { shape, rotation } ou null
 let obstacleEditor;
+let removingObstacle = false;      // mode « Retirer un obstacle » : clic sur l'obstacle
+let canvasNotice = null;           // message temporaire sur le circuit { text, until }
+const NOTICE_DURATION_MS = 4000;
 const OBSTACLE_ROTATION_STEP = Math.PI / 12;   // touche R : +15°
 const speedMeter = new SpeedMeter();
 
@@ -57,21 +61,18 @@ function safeLocalStorage() {
 }
 
 function bindMenu() {
-  ui.circuitName = document.getElementById("currentCircuit");
-  ui.selectionCount = document.getElementById("selectionCount");
-  ui.raysCheckbox = document.getElementById("raysCheckbox");
   ui.trainButton = document.getElementById("trainButton");
   ui.stopButton = document.getElementById("stopButton");
   ui.curriculumButton = document.getElementById("curriculumButton");
-  ui.levelInfo = document.getElementById("levelInfo");
-  ui.generationValue = document.getElementById("generationValue");
-  ui.aliveValue = document.getElementById("aliveValue");
   ui.lineages = document.getElementById("lineages");
-  ui.garageList = document.getElementById("garageList");
-  ui.topology = document.getElementById("topologyValue");
+  ui.summary = document.getElementById("raceSummary");
+  ui.circuitButton = document.getElementById("circuitShowroomButton");
+  ui.carsButton = document.getElementById("showroomButton");
+  ui.networkLink = document.getElementById("networkLink");
+  ui.raysButton = document.getElementById("rayEditorButton");
+  ui.raysToggle = document.getElementById("raysToggleButton");
 
   buildCircuitShowroom();
-
   showTopology();
   // Une modification faite dans network.html (autre onglet) arrive ici.
   window.addEventListener("storage", onStorageChange);
@@ -79,11 +80,14 @@ function bindMenu() {
   buildShowroom();
   bindModelFiles();
   bindObstacles();
-  renderGarage();
+  bindRayEditor();
   bindRayLength();
   bindSpeedButtons();
-  ui.raysCheckbox.checked = showRays;
-  ui.raysCheckbox.addEventListener("change", () => { showRays = ui.raysCheckbox.checked; });
+  ui.raysToggle.addEventListener("click", () => {
+    showRays = !showRays;
+    ui.raysToggle.setAttribute("aria-pressed", String(showRays));
+    ui.raysToggle.textContent = `Rayons du leader : ${showRays ? "affichés" : "masqués"}`;
+  });
   ui.trainButton.addEventListener("click", startTraining);
   ui.stopButton.addEventListener("click", stopTraining);
   ui.curriculumButton.addEventListener("click", startCurriculum);
@@ -100,22 +104,22 @@ function bindRayLength() {
   ui.rayLengthSlider.addEventListener("input", () => changeRayLength(ui.rayLengthSlider.value));
   document.getElementById("rayShorterButton").addEventListener("click", () => changeRayLength(currentRayLength() - RAY_LENGTH_STEP));
   document.getElementById("rayLongerButton").addEventListener("click", () => changeRayLength(currentRayLength() + RAY_LENGTH_STEP));
-  document.getElementById("rayResetButton").addEventListener("click", () => changeRayLength(DEFAULT_RAY_LENGTH));
+  document.getElementById("rayLengthDefaultButton").addEventListener("click", () => changeRayLength(DEFAULT_RAY_LENGTH));
   showRayLength();
 }
 
-// Vitesse de simulation : un bouton par facteur (×1 … ×100, max) et le
-// facteur effectivement atteint, mesuré sur les dernières images.
+// Vitesse de simulation : un bouton par facteur (×1 … ×100, max). Le facteur
+// effectivement atteint s'affiche dans le résumé des lignées.
 function bindSpeedButtons() {
   ui.speedButtons = document.getElementById("speedButtons");
-  ui.speedEffective = document.getElementById("speedEffective");
   for (const factor of SPEED_FACTORS) {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "small";
     button.dataset.factor = factor;
     button.textContent = factor === "max" ? "max" : `×${factor}`;
-    button.setAttribute("aria-label", factor === "max" ? "Vitesse maximale" : `Vitesse ×${factor}`);
+    button.setAttribute("aria-label", factor === "max" ? "Vitesse de simulation maximale" : `Vitesse de simulation ×${factor}`);
+    button.title = button.getAttribute("aria-label");
     button.addEventListener("click", () => changeSpeedFactor(factor));
     ui.speedButtons.appendChild(button);
   }
@@ -133,19 +137,15 @@ function showSpeedFactor() {
   for (const button of ui.speedButtons.children) {
     button.setAttribute("aria-pressed", String(normalizeSpeedFactor(button.dataset.factor) === speedFactor));
   }
-  showEffectiveSpeed();
 }
 
-function showEffectiveSpeed() {
-  const wanted = speedFactor === "max" ? "max" : `×${speedFactor}`;
-  const running = training || demo;
+// Vitesse atteinte (résumé des lignées) : « ×8.4 (limite de la machine) ».
+function effectiveSpeedText() {
   const reached = speedMeter.average;
-  let text = `demandé ${wanted}`;
-  if (running && reached > 0) {
-    text += ` · atteint ×${reached.toFixed(reached < 10 ? 1 : 0)}`;
-    if (speedFactor !== "max" && reached < speedFactor * 0.9) text += " (limite de la machine)";
-  }
-  ui.speedEffective.textContent = text;
+  if (!(training || demo) || reached <= 0) return "";
+  let text = `vitesse ×${reached.toFixed(reached < 10 ? 1 : 0)}`;
+  if (speedFactor !== "max" && reached < speedFactor * 0.9) text += " (limite de la machine)";
+  return text;
 }
 
 function changeRayLength(px) {
@@ -159,15 +159,56 @@ function showRayLength() {
   ui.rayLengthSlider.value = px;
   const meters = px / (TRACK_WIDTH / F1_TRACK_WIDTH_M);
   ui.rayLengthValue.textContent = `${px} px ≈ ${meters.toFixed(0)} m`;
+  showRaysButton();
 }
 
+// Bouton « Rayons » : nombre de rayons et longueur, ouvre l'éditeur.
+function showRaysButton() {
+  const count = rayAnglesFromConfig(currentNetworkConfig()).length;
+  ui.raysButton.textContent = `Rayons : ${count} · longueur ${currentRayLength()} px`;
+}
+
+// Éditeur de rayons (angles et longueur), ouvert par le bouton « Rayons ».
+function bindRayEditor() {
+  const rayEditor = new RayEditor({
+    dialog: document.getElementById("rayDialog"),
+    canvas: document.getElementById("rayCanvas"),
+    list: document.getElementById("rayList"),
+    angleInput: document.getElementById("rayAngleInput"),
+    addButton: document.getElementById("rayAddButton"),
+    info: document.getElementById("rayInfo"),
+    status: document.getElementById("rayStatus"),
+    applyButton: document.getElementById("rayApplyButton"),
+    resetButton: document.getElementById("rayResetButton"),
+    confirmBox: document.getElementById("rayConfirm"),
+    confirmText: document.getElementById("rayConfirmText"),
+    confirmButton: document.getElementById("rayConfirmButton"),
+    cancelButton: document.getElementById("rayCancelButton"),
+    storage: safeLocalStorage,
+    garage: () => garage,
+    onApplied: (result) => {
+      if (!result.changed) return;
+      // Nouvelle couche d'entrée : l'entraînement en cours et le garage sont périmés.
+      stopTraining();
+      garage.load();
+      removeIncompatibleLineages();
+      refreshGarageViews();
+      showTopology();
+    }
+  });
+  ui.raysButton.addEventListener("click", () => rayEditor.open());
+  document.getElementById("rayDialogClose").addEventListener("click", () => rayEditor.close());
+}
+
+// Bouton « Réseau de neurones » : affiche la topologie courante.
 function showTopology() {
   try {
-    const source = architectureOverride ? "interface" : "network-config.js";
-    ui.topology.textContent = `${NeuralNetwork.fromConfig(currentNetworkConfig()).describe()} (${source})`;
+    ui.networkLink.textContent = `Réseau de neurones : ${NeuralNetwork.fromConfig(currentNetworkConfig()).layers.join(" → ")}`;
   } catch (error) {
-    ui.topology.textContent = error.message;
+    ui.networkLink.textContent = "Réseau de neurones : configuration invalide";
+    notify(error.message);
   }
+  if (ui.raysButton) showRaysButton();
 }
 
 // Changement d'architecture dans un autre onglet : l'entraînement en cours
@@ -177,6 +218,7 @@ function onStorageChange(event) {
     stopTraining();
     useStoredArchitecture(safeLocalStorage());
     showTopology();
+    showRaysButton();
   }
   if (event.key === OBSTACLES_STORAGE_KEY) {
     obstacles = loadObstacles(safeLocalStorage(), circuitKey);
@@ -193,8 +235,7 @@ function onStorageChange(event) {
   if (event.key === ARCHITECTURE_STORAGE_KEY || event.key === GARAGE_STORAGE_KEY) {
     garage.load();
     removeIncompatibleLineages();
-    garageChoice.clear();
-    renderGarage();
+    refreshGarageViews();
   }
 }
 
@@ -202,11 +243,11 @@ function onStorageChange(event) {
 // peut pas être reprise (elle aurait pu être réécrite pendant le changement).
 function removeIncompatibleLineages() {
   const config = currentNetworkConfig();
-  garage.removeIncompatible(config.hiddenLayers, config.hiddenActivation);
+  garage.removeIncompatible(config.hiddenLayers, config.hiddenActivation, rayAnglesFromConfig(config).length + 1);
 }
 
-// Vitrine : aucune voiture sélectionnée au départ ; le bouton l'ouvre, le
-// compteur en dessous indique la sélection.
+// Vitrine : aucune voiture sélectionnée au départ ; le bouton l'ouvre et
+// affiche la sélection. Les actions du garage sont sur chaque carte.
 function buildShowroom() {
   const dialog = document.getElementById("showroomDialog");
   const confidenceDialog = document.getElementById("confidenceDialog");
@@ -220,14 +261,24 @@ function buildShowroom() {
     circuits: allCircuitEntries,
     pixelsPerMeter: TRACK_WIDTH / F1_TRACK_WIDTH_M,
     onSelectionChange: (count) => {
-      ui.selectionCount.textContent = selectionLabel(count);
+      showCarsButton(count);
       updateButtons();
+    },
+    onDownload: (key) => downloadModel(key),
+    onReset: (key) => {
+      garage.remove(key);
+      refreshGarageViews();
+      showModelStatus(`${key} repart de zéro : sa prochaine génération sera la génération 0.`);
     }
   });
   document.getElementById("showroomButton").addEventListener("click", () => showroom.open());
   document.getElementById("showroomClose").addEventListener("click", () => showroom.close());
   document.getElementById("confidenceClose").addEventListener("click", () => confidenceDialog.close());
-  ui.selectionCount.textContent = selectionLabel(0);
+  showCarsButton(0);
+}
+
+function showCarsButton(count) {
+  ui.carsButton.textContent = carsButtonLabel(count);
 }
 
 // Vitrine des circuits : le bouton l'ouvre ; choisir une carte arrête
@@ -273,7 +324,7 @@ function isTrainingLevel(key) {
 // L'échelle est celle d'une piste F1 : la voiture garde la même taille partout.
 function buildCircuit(key) {
   circuitKey = key;
-  ui.circuitName.textContent = `Circuit actuel : ${circuitLayout(key).name}`;
+  ui.circuitButton.textContent = `Circuit : ${circuitLayout(key).name}`;
   circuit = new Circuit(circuitLayout(key), {
     key,
     canvasWidth: CANVAS_WIDTH, canvasHeight: CANVAS_HEIGHT, trackWidth: TRACK_WIDTH,
@@ -283,23 +334,25 @@ function buildCircuit(key) {
   trackLayer = createGraphics(CANVAS_WIDTH, CANVAS_HEIGHT);
   drawTrackLayer(trackLayer, circuit, createRng(42));
   placing = null;
+  removingObstacle = false;
   obstacles = loadObstacles(safeLocalStorage(), key);
   refreshObstacles(false);
-  renderGarage(); // pourcentages et validations propres à ce circuit
+  refreshGarageViews(); // pourcentages et validations propres à ce circuit
   updatePanel();
 }
 
-// Snapshot de reprise : génération choisie dans le garage, sinon la dernière.
+// Snapshot de reprise : dernier champion de la lignée au garage.
 function chosenSnapshot(key) {
-  return garage.snapshot(key, garageChoice.has(key) ? garageChoice.get(key) : null);
+  return garage.snapshot(key);
 }
 
-// Confiance mémorisée de la lignée sur le circuit affiché (null : jamais roulé).
+// État de confiance de la lignée sur le circuit affiché (null : jamais roulé,
+// départ à 100 %).
 function confidenceHere(key) {
-  return garage.circuitConfidence(key, circuitKey);
+  return garage.circuitConfidenceState(key, circuitKey);
 }
 
-// Lignées sauvegardées : reprise depuis la génération choisie ; sinon génération 0.
+// Lignées sauvegardées : reprise depuis leur dernière génération ; sinon génération 0.
 // Une lignée qui a déjà validé ce circuit (confiance 100 %) ne s'y entraîne plus.
 function startTraining() {
   const chosen = selectedModels();
@@ -364,7 +417,6 @@ function prepareCurriculumLevel() {
     if (remaining.length > 0) {
       const models = remaining.map((key) => curriculumModels.get(key));
       cars = createTrainingPopulation(circuit, models, rng, chosenSnapshot, confidenceHere);
-      garageChoice.clear();
       return;
     }
     curriculum.advanceIfComplete();
@@ -381,7 +433,7 @@ function finishCurriculum() {
     garage.markTrained(key, snapshot.generation);
     champions.push({ spec: snapshot.spec, brain: NeuralNetwork.fromJSON(snapshot.brain), generation: snapshot.generation });
   }
-  renderGarage();
+  refreshGarageViews();
   startDemo(champions);
 }
 
@@ -396,12 +448,10 @@ function draw() {
   }
   if (demo) drawDemoCars();
   else if (training) drawTrainingCars();
-  else if (!placing) drawIdleMessage();
+  else if (!placing && !removingObstacle) drawIdleMessage();
   drawPlacementPreview();
-  if (frameCount % PANEL_EVERY === 0) {
-    updatePanel();
-    showEffectiveSpeed();
-  }
+  drawCanvasNotice();
+  if (frameCount % PANEL_EVERY === 0) updatePanel();
 }
 
 // Un pas de simulation (identique quelle que soit la vitesse) : chaque voiture
@@ -431,7 +481,6 @@ function advanceLineages() {
   let levelChange = false;
   cars = advanceStoppedLineages(cars, circuit, rng, (key, best) => {
     garage.recordChampion(best, circuit.name);
-    garageChoice.delete(key);
     generationsPlayed++;
     if (runFinished(best)) {
       statusMessage = `Voiture entraînée dans le circuit ${circuit.name} (100 %) : ${key}.`;
@@ -453,7 +502,7 @@ let lastRenderedGenerations = 0;
 function renderGarageIfChanged() {
   if (generationsPlayed === lastRenderedGenerations) return;
   lastRenderedGenerations = generationsPlayed;
-  renderGarage();
+  refreshGarageViews();
 }
 
 // Démonstration : un champion par lignée roule sur le circuit F1 de départ,
@@ -489,7 +538,7 @@ function drawIdleMessage() {
   fill(255);
   textAlign(CENTER, CENTER);
   textSize(18);
-  text("« Choisir les voitures », sélectionnez-en, puis « Entraîner »", width / 2, height / 2 - (statusMessage ? 16 : 0));
+  text("Choisissez des voitures, puis « Entraîner sur ce circuit »", width / 2, height / 2 - (statusMessage ? 16 : 0));
   if (statusMessage) {
     fill(140, 230, 140);
     textSize(14);
@@ -515,10 +564,24 @@ function formatSensors(car) {
   return `rayons (px, max ${car.sightDistance}) : ${rays} | vitesse ${car.vel.mag().toFixed(2)} px/img (${car.speedKmh.toFixed(0)} km/h)`;
 }
 
+// Résumé au-dessus des lignées : générations, voitures en piste, vitesse
+// atteinte, niveau du parcours et dernier message.
+function summaryHtml() {
+  const parts = [];
+  if (training) parts.push(`${generationsPlayed} génération(s) terminée(s)`);
+  if (training || demo) parts.push(`en piste ${cars.filter((c) => c.racing).length}/${cars.length}`);
+  const speed = effectiveSpeedText();
+  if (speed) parts.push(speed);
+  let html = parts.join(" · ");
+  const level = levelInfoHtml();
+  if (level) html += (html ? "<br>" : "") + level;
+  if (statusMessage) html += (html ? "<br>" : "") + `<span class="saved-tag">${statusMessage}</span>`;
+  if (garage.lastError) html += `<br>Sauvegarde impossible : ${garage.lastError.message}`;
+  return html;
+}
+
 function updatePanel() {
-  ui.generationValue.textContent = training ? generationsPlayed : "-"; // toutes lignées confondues
-  ui.aliveValue.textContent = training || demo ? `${cars.filter((c) => c.racing).length} / ${cars.length}` : "-";
-  ui.levelInfo.innerHTML = levelInfoHtml() + (statusMessage ? `<br><small class="saved-tag">${statusMessage}</small>` : "");
+  ui.summary.innerHTML = summaryHtml();
   if (demo) {
     ui.lineages.innerHTML = cars.map((car) => `<li><span class="swatch" style="background:${car.spec.color}"></span>` +
       `<strong>${car.spec.brand}</strong> ${car.spec.model} · gén. ${car.generation} – ${DEMO_CAPTION}` +
@@ -552,7 +615,7 @@ function updatePanel() {
 // (changer de circuit change les pourcentages), confiance et validation.
 function circuitPercentagesHtml() {
   const keys = garage.keys();
-  if (keys.length === 0) return "<li><small>Aucune voiture au garage.</small></li>";
+  if (keys.length === 0) return "";
   return keys.map((key) => {
     const latest = garage.snapshot(key);
     const record = garage.circuitRecord(key, circuitKey);
@@ -579,8 +642,6 @@ function levelInfoHtml() {
 // ---------- Obstacles (obstacle.js, obstacle-editor.js) ----------
 
 function bindObstacles() {
-  ui.obstacleList = document.getElementById("obstacleList");
-  ui.obstacleStatus = document.getElementById("obstacleStatus");
   const dialog = document.getElementById("obstacleDialog");
   obstacleEditor = new ObstacleEditor({
     dialog,
@@ -602,6 +663,12 @@ function bindObstacles() {
   document.getElementById("clearObstaclesButton").addEventListener("click", () => {
     obstacles = [];
     refreshObstacles();
+    notify(`Tous les obstacles de ${circuit.name} sont retirés.`);
+  });
+  document.getElementById("removeObstacleButton").addEventListener("click", () => {
+    placing = null;
+    removingObstacle = obstacles.length > 0;
+    if (!removingObstacle) notify(`Aucun obstacle sur ${circuit.name}.`);
   });
   // Placement : clic sur le circuit ; R tourne, Échap annule.
   document.querySelector("#canvas-container canvas").addEventListener("pointerdown", onCanvasPointerDown);
@@ -610,7 +677,7 @@ function bindObstacles() {
 
 function startPlacing(shape) {
   placing = { shape, rotation: 0 };
-  ui.obstacleStatus.textContent = "Cliquez sur le circuit pour poser l'obstacle · R : tourner · Échap : annuler.";
+  removingObstacle = false;
 }
 
 // Position du pointeur dans le repère du canvas (taille affichée ≠ taille réelle possible).
@@ -620,22 +687,57 @@ function canvasPoint(event) {
 }
 
 function onCanvasPointerDown(event) {
-  if (!placing) return;
-  const { x, y } = canvasPoint(event);
-  obstacles.push(new Obstacle(x, y, placing.shape, placing.rotation));
-  placing = null;
-  refreshObstacles();
-  ui.obstacleStatus.textContent = `Obstacle posé sur ${circuit.name}. Les rayons le voient et une voiture qui le touche est éliminée.`;
+  const point = canvasPoint(event);
+  if (placing) {
+    obstacles.push(new Obstacle(point.x, point.y, placing.shape, placing.rotation));
+    placing = null;
+    refreshObstacles();
+    notify("Obstacle posé : les rayons le voient, une voiture qui le touche est éliminée.");
+  } else if (removingObstacle) {
+    const index = obstacleIndexAt(obstacles, point);
+    if (index === -1) {
+      notify("Aucun obstacle ici : cliquez sur un obstacle, ou Échap pour annuler.");
+      return;
+    }
+    obstacles.splice(index, 1);
+    removingObstacle = false;
+    refreshObstacles();
+    notify("Obstacle retiré.");
+  }
 }
 
 function onPlacementKey(event) {
-  if (!placing) return;
-  if (event.key === "Escape") {
+  if (event.key === "Escape" && (placing || removingObstacle)) {
     placing = null;
-    ui.obstacleStatus.textContent = "Placement annulé.";
-  } else if (event.key === "r" || event.key === "R") {
+    removingObstacle = false;
+    notify("Annulé.");
+  } else if (placing && (event.key === "r" || event.key === "R")) {
     placing.rotation += OBSTACLE_ROTATION_STEP;
   }
+}
+
+// Message temporaire affiché en haut du circuit.
+function notify(text) {
+  canvasNotice = { text, until: millis() + NOTICE_DURATION_MS };
+}
+
+// Bandeau en haut du circuit : consigne du mode en cours, sinon dernier message.
+function drawCanvasNotice() {
+  let message = null;
+  if (placing) message = "Cliquez sur le circuit pour poser l'obstacle · R : tourner · Échap : annuler";
+  else if (removingObstacle) message = "Cliquez sur l'obstacle à retirer · Échap : annuler";
+  else if (canvasNotice && millis() < canvasNotice.until) message = canvasNotice.text;
+  if (!message) return;
+  push();
+  noStroke();
+  fill(0, 180);
+  rectMode(CORNER);
+  rect(0, 0, width, 34);
+  fill(255, 230, 0);
+  textAlign(CENTER, CENTER);
+  textSize(15);
+  text(message, width / 2, 17);
+  pop();
 }
 
 // Aperçu de l'obstacle sous le pointeur pendant le placement.
@@ -644,46 +746,18 @@ function drawPlacementPreview() {
   new Obstacle(mouseX, mouseY, placing.shape, placing.rotation).show(true);
 }
 
-// Recalcule les murs, la liste du menu et (par défaut) mémorise les obstacles.
+// Recalcule les murs et (par défaut) mémorise les obstacles.
 function refreshObstacles(save = true) {
   obstacleWallList = obstacleWalls(obstacles);
   if (save) saveObstacles(safeLocalStorage(), circuitKey, obstacles);
-  renderObstacleList();
-}
-
-function renderObstacleList() {
-  ui.obstacleList.innerHTML = "";
-  if (obstacles.length === 0) {
-    ui.obstacleList.innerHTML = `<li><small>Aucun obstacle sur ${circuit.name}.</small></li>`;
-    return;
-  }
-  const ppm = TRACK_WIDTH / F1_TRACK_WIDTH_M;
-  obstacles.forEach((obstacle, i) => {
-    const xs = obstacle.points.map((p) => p[0]);
-    const ys = obstacle.points.map((p) => p[1]);
-    const size = Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)) / ppm;
-    const item = document.createElement("li");
-    item.append(`Obstacle ${i + 1} · ${obstacle.points.length} côtés · ${size.toFixed(1)} m `);
-    const remove = document.createElement("button");
-    remove.type = "button";
-    remove.className = "small";
-    remove.textContent = "Supprimer";
-    remove.setAttribute("aria-label", `Supprimer l'obstacle ${i + 1}`);
-    remove.addEventListener("click", () => {
-      obstacles.splice(i, 1);
-      refreshObstacles();
-    });
-    item.appendChild(remove);
-    ui.obstacleList.appendChild(item);
-  });
 }
 
 // ---------- Modèles en fichier (model-file.js) ----------
 
 // Téléchargement d'un modèle : fichier JSON nommé marque_modele_genN.json.
-function downloadModel(key, generation) {
+function downloadModel(key) {
   try {
-    const data = exportModelFile(garage, key, generation);
+    const data = exportModelFile(garage, key);
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -693,7 +767,7 @@ function downloadModel(key, generation) {
     link.click();
     link.remove();
     setTimeout(() => URL.revokeObjectURL(url), 0); // libère le fichier temporaire
-    showModelStatus(`Modèle ${key} génération ${data.generation} téléchargé (${link.download}).`);
+    showModelStatus(`${key} génération ${data.generation} téléchargée (${link.download}).`);
   } catch (error) {
     showModelStatus(error.message, true);
   }
@@ -740,7 +814,7 @@ function loadModelText(text, fileName) {
   }
   if (!modelMatchesArchitecture(data, currentNetworkConfig())) {
     showModelStatus(`${fileName} : réseau ${describeModelArchitecture(data)}, différent de l'architecture actuelle ` +
-      `(${NeuralNetwork.fromConfig(currentNetworkConfig()).describe()}). Appliquez d'abord cette architecture dans « Voir / modifier le réseau ».`, true);
+      `(${NeuralNetwork.fromConfig(currentNetworkConfig()).describe()}). Appliquez d'abord ce réseau et ces rayons (« Réseau de neurones », « Rayons »).`, true);
     return;
   }
   const key = lineageKey({ brand: data.brand, model: data.model });
@@ -757,9 +831,7 @@ function importModel(data) {
   const { key, replaced } = garage.importLineage(data);
   pendingModel = null;
   ui.modelConfirm.hidden = true;
-  garageChoice.delete(key);
-  renderGarage();
-  updatePanel();
+  refreshGarageViews();
   showModelStatus(`${key} génération ${data.generation} ${replaced ? "a remplacé la lignée du garage" : "est au garage"} : sélectionnez-la puis « Entraîner » pour reprendre à la génération ${data.generation + 1}.`);
 }
 
@@ -768,64 +840,9 @@ function showModelStatus(message, isError = false) {
   ui.modelStatus.classList.toggle("error", isError);
 }
 
-// Garage : une ligne par lignée sauvegardée, choix de la génération de reprise.
-function renderGarage() {
-  ui.garageList.innerHTML = "";
-  const keys = garage.keys();
-  if (keys.length === 0) {
-    ui.garageList.innerHTML = "<li><small>Vide : les champions y sont rangés à chaque fin de génération.</small></li>";
-  }
-  for (const key of keys) {
-    const latest = garage.snapshot(key);
-    const item = document.createElement("li");
-    const title = document.createElement("div");
-    title.innerHTML = `<span class="swatch" style="background:${latest.spec.color}"></span><strong>${latest.spec.brand}</strong> ${latest.spec.model}` +
-      ` <small>${NeuralNetwork.fromJSON(latest.brain).describe()}</small>` +
-      (garage.trainedInfo(key) ? `<br><small class="saved-tag">entraînée sur les circuits d'entraînement (gén. ${garage.trainedInfo(key).generation})</small>` : "") +
-      garage.trainedCircuits(key).map((c) => `<br><small class="saved-tag">entraînée dans le circuit ${c.name} ✓ (gén. ${c.generation})</small>`).join("");
-
-    const select = document.createElement("select");
-    select.setAttribute("aria-label", `Génération de reprise pour ${key}`);
-    for (const gen of garage.generations(key).reverse()) {
-      const snap = garage.snapshot(key, gen);
-      const option = document.createElement("option");
-      option.value = gen;
-      const confidence = snap.spec.confidence !== undefined ? ` · roulée à ${(snap.spec.confidence * 100).toFixed(0)} % de confiance` : "";
-      option.textContent = `gén. ${gen} — ${formatProgress(snap.progress)} sur ${snap.circuit}${confidence}${gen === latest.generation ? " (dernière)" : ""}`;
-      select.appendChild(option);
-    }
-    select.value = garageChoice.has(key) ? garageChoice.get(key) : latest.generation;
-    select.addEventListener("change", () => {
-      const gen = parseInt(select.value, 10);
-      if (gen === latest.generation) garageChoice.delete(key);
-      else garageChoice.set(key, gen);
-    });
-
-    // Télécharge la génération choisie dans la liste ci-dessus.
-    const download = document.createElement("button");
-    download.type = "button";
-    download.className = "small";
-    download.textContent = "Télécharger (.json)";
-    download.setAttribute("aria-label", `Télécharger le modèle ${key} à la génération choisie`);
-    download.addEventListener("click", () => downloadModel(key, parseInt(select.value, 10)));
-
-    const remove = document.createElement("button");
-    remove.type = "button";
-    remove.className = "small";
-    remove.textContent = "Repartir de zéro";
-    remove.addEventListener("click", () => {
-      garage.remove(key);
-      garageChoice.delete(key);
-      renderGarage();
-    });
-
-    item.append(title, select, download, remove);
-    ui.garageList.appendChild(item);
-  }
+// Après un changement du garage : vitrine des voitures (si ouverte) et
+// lignées affichées au repos (pourcentages sur le circuit actuel).
+function refreshGarageViews() {
   if (showroom && showroom.options.dialog.open) showroom.refresh();
-  if (garage.lastError) {
-    const warn = document.createElement("li");
-    warn.innerHTML = `<small>Sauvegarde impossible : ${garage.lastError.message}</small>`;
-    ui.garageList.appendChild(warn);
-  }
+  if (ui.summary) updatePanel();
 }

@@ -23,14 +23,43 @@ function gaussian(rng, mean = 0, sd = 1) {
   return mean + sd * Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
 }
 
+const MAX_RAYS = 15;
+
+// Angles répartis régulièrement sur une ouverture (ancienne écriture rays + rayFovDegrees).
+function evenRayAngles(count, fovDegrees) {
+  if (count === 1) return [0];
+  return Array.from({ length: count }, (_, i) => -fovDegrees / 2 + (i * fovDegrees) / (count - 1));
+}
+
+// Angles des rayons (degrés, 0 = droit devant, + = vers la droite) d'une configuration :
+// liste rayAngles si elle existe, sinon rays rayons répartis sur rayFovDegrees.
+function rayAnglesFromConfig(config) {
+  if (Array.isArray(config.rayAngles)) return config.rayAngles.slice();
+  return evenRayAngles(config.rays, config.rayFovDegrees);
+}
+
+// Message d'erreur si la liste d'angles n'est pas utilisable, sinon null.
+function validateRayAngles(angles) {
+  if (!Array.isArray(angles) || angles.length < 1 || angles.length > MAX_RAYS) return `de 1 à ${MAX_RAYS} rayons`;
+  if (!angles.every((a) => Number.isFinite(a) && a >= -180 && a <= 180)) return "angles entre -180° et 180°";
+  if (new Set(angles.map((a) => Math.round(a * 1000))).size !== angles.length) return "deux rayons ont le même angle";
+  return null;
+}
+
 // Vérifie network-config.js et retourne la liste des tailles de couches.
+// Couche d'entrée = un neurone par rayon + un neurone pour la vitesse.
 function layerSizesFromConfig(config) {
   const errors = [];
-  if (!Number.isInteger(config.rays) || config.rays < 1 || config.rays > 15) {
-    errors.push("rays doit être un entier entre 1 et 15");
-  }
-  if (!(config.rayFovDegrees >= 10 && config.rayFovDegrees <= 360)) {
-    errors.push("rayFovDegrees doit être entre 10 et 360");
+  if (Array.isArray(config.rayAngles)) {
+    const problem = validateRayAngles(config.rayAngles);
+    if (problem) errors.push(`rayAngles : ${problem}`);
+  } else {
+    if (!Number.isInteger(config.rays) || config.rays < 1 || config.rays > MAX_RAYS) {
+      errors.push(`rays doit être un entier entre 1 et ${MAX_RAYS}`);
+    }
+    if (!(config.rayFovDegrees >= 10 && config.rayFovDegrees <= 360)) {
+      errors.push("rayFovDegrees doit être entre 10 et 360");
+    }
   }
   if (!Array.isArray(config.hiddenLayers) ||
       !config.hiddenLayers.every((n) => Number.isInteger(n) && n >= 1 && n <= 64)) {
@@ -40,7 +69,7 @@ function layerSizesFromConfig(config) {
     errors.push(`hiddenActivation doit valoir ${Object.keys(ACTIVATIONS).join(", ")}`);
   }
   if (errors.length > 0) throw new Error("network-config.js invalide : " + errors.join(" ; "));
-  return [config.rays + 1, ...config.hiddenLayers, NETWORK_OUTPUTS.length];
+  return [rayAnglesFromConfig(config).length + 1, ...config.hiddenLayers, NETWORK_OUTPUTS.length];
 }
 
 class NeuralNetwork {

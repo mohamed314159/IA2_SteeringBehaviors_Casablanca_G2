@@ -88,7 +88,8 @@ function parseModelFile(text) {
 // activation) : sinon il ne peut pas entrer au garage (voir architecture.js).
 function modelMatchesArchitecture(data, config) {
   const hidden = data.snapshot.brain.layers.slice(1, -1);
-  return data.snapshot.brain.hiddenActivation === config.hiddenActivation &&
+  return data.snapshot.brain.layers[0] === rayAnglesFromConfig(config).length + 1 &&
+    data.snapshot.brain.hiddenActivation === config.hiddenActivation &&
     hidden.length === config.hiddenLayers.length &&
     hidden.every((n, i) => n === config.hiddenLayers[i]);
 }

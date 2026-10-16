@@ -158,6 +158,15 @@ function saveObstacles(storage, circuitKey, obstacles) {
   }
 }
 
+// Indice de l'obstacle sous un point (à l'intérieur ou à moins de `tolerance`
+// px de son bord), le plus récent en premier ; -1 si aucun.
+function obstacleIndexAt(obstacles, point, tolerance = 6) {
+  for (let i = obstacles.length - 1; i >= 0; i--) {
+    if (obstacles[i].collides(point, tolerance)) return i;
+  }
+  return -1;
+}
+
 // Tous les murs des obstacles (pour les rayons capteurs).
 function obstacleWalls(obstacles) {
   return obstacles.flatMap((o) => o.walls);

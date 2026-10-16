@@ -135,7 +135,7 @@ test("nextGeneration : la meilleure de chaque lignée sert de base", () => {
     assert.deepEqual(group[0].brain.toJSON(), parent.brain.toJSON());
     assert.equal(group[0].spec.maxSpeed, parent.spec.maxSpeed);
     // Confiance : la même pour toute la génération, calculée sur le parent.
-    const expected = ex.nextConfidence(parent.confidence, parent.progress, parent.framesAlive);
+    const expected = ex.advanceConfidence(parent.spec.confidenceState, parent.progress, false).confidence;
     for (const child of group) assert.equal(child.confidence, expected);
     // Les autres sont des mutations du champion (proches mais différentes).
     assert.notDeepEqual(group[1].brain.toJSON(), parent.brain.toJSON());
@@ -152,13 +152,14 @@ test("évolution réelle : la vitesse de chaque génération suit les résultats
     }
     const best = ex.bestCar(cars);
     const next = ex.nextGeneration(cars, monza, rng);
-    const expected = ex.nextConfidence(best.confidence, best.progress, best.framesAlive);
+    const expected = ex.advanceConfidence(best.spec.confidenceState, best.progress, ex.runFinished(best)).confidence;
     for (const child of next) {
       assert.equal(child.confidence, expected);
       assert.ok(Math.abs(child.maxSpeed - child.spec.maxSpeed * expected) < 1e-12);
     }
-    // Génération ratée (moins d'un quart de tour, moins de 5 s) → plus lente.
-    if (best.progress < 0.25 && best.secondsAlive < 5) assert.ok(expected < best.confidence);
+    // Générations 1 et 2 du circuit à 50 % (sauf circuit complété), jamais moins de 50 %.
+    if (gen < 2 && !ex.runFinished(best)) assert.equal(expected, 0.5);
+    assert.ok(expected >= 0.5);
     cars = next;
   }
 });

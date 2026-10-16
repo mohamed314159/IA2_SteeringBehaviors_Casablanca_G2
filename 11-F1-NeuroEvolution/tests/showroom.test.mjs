@@ -38,10 +38,10 @@ test("chaque modèle a une livrée connue et un numéro unique, transmis à la v
 
 // ---------- Vitrine : fonctions pures ----------
 
-test("compteur de sélection : « 0 voiture sélectionnée », accord au pluriel", () => {
-  assert.equal(ex.selectionLabel(0), "0 voiture sélectionnée");
-  assert.equal(ex.selectionLabel(1), "1 voiture sélectionnée");
-  assert.equal(ex.selectionLabel(3), "3 voitures sélectionnées");
+test("bouton « Voitures » : nombre de voitures sélectionnées, accord au pluriel", () => {
+  assert.equal(ex.carsButtonLabel(0), "Voitures : aucune sélectionnée");
+  assert.equal(ex.carsButtonLabel(1), "Voitures : 1 sélectionnée");
+  assert.equal(ex.carsButtonLabel(3), "Voitures : 3 sélectionnées");
 });
 
 test("la vitrine propose tous les modèles, avec des clés de lignée uniques", () => {
@@ -75,9 +75,11 @@ test("confiance par circuit : départ si jamais roulé, fiche sinon, validation"
   for (const row of ex.circuitConfidenceRows(garage, KEY_B, circuits)) assert.equal(row.neverDriven, true);
 });
 
-test("speedToKmh : 1 m par image = 216 km/h", () => {
-  assert.ok(Math.abs(ex.speedToKmh(44 / 14, 44 / 14) - 216) < 1e-9);
-  assert.equal(ex.speedToKmh(0, 3), 0);
+test("cartes de la vitrine sans fiche technique (numéro, livrée, vitesse, adhérence)", () => {
+  const source = fs.readFileSync(new URL("../showroom.js", import.meta.url), "utf8");
+  for (const removed of ["livrée ${", "vitesse max", "adhérence", "facts"]) {
+    assert.equal(source.includes(removed), false, removed);
+  }
 });
 
 // ---------- Dessin ----------

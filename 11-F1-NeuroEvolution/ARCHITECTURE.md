@@ -20,6 +20,9 @@ Règle de mise à jour : chaque nouvelle demande est ajoutée à la pile sous la
 | 10 | Sauvegarde / chargement d'un modèle en fichier, avec sa génération | **DONE** |
 | 11 | Éditeur d'obstacles : dessiner un obstacle dans le menu et le placer sur le circuit | **DONE** |
 | 12 | Vitrine des circuits à la place de la liste déroulante | **DONE** |
+| 13 | Nouvelle règle de confiance (100 %, puis 50 %, puis paliers selon le progrès) | **DONE** |
+| 14 | Rayons à des angles différents (un rayon = un neurone d'entrée) ; vitrine sans fiche technique | **DONE** |
+| 15 | Menu épuré : lignées en haut, uniquement des boutons ; garage dans la vitrine des voitures ; longueur des rayons dans l'éditeur de rayons | **DONE** |
 
 ### Étape 1 – Circuit, décor, marques, rayons — **DONE**
 - Trois circuits F1 stylisés (Monza, Spa, Interlagos) lissés par Catmull-Rom ; bords sans croisement vérifiés par les tests.
@@ -32,11 +35,11 @@ Règle de mise à jour : chaque nouvelle demande est ajoutée à la pile sous la
 - Réseau 6 → 20 → 2 (comme 9b) en JavaScript pur ; topologie dans `network-config.js`, visualisation dans `network.html`.
 - Liste de marques et modèles à cocher (remplacée par la vitrine à l'étape 8) ; « Entraîner » lâche la génération 0 avec cerveaux et paramètres aléatoires ; « Arrêter ».
 - Une lignée par modèle : le meilleur sert de base (élite + enfants mutés).
-- Garage (`localStorage`) : champion de chaque génération record, reprise depuis la génération choisie.
+- Garage (`localStorage`) : champion de chaque génération record, reprise depuis la dernière génération (choix d'une génération retiré à l'étape 15).
 - Longueur de chaque rayon et vitesse affichées à côté du pourcentage.
 
 ### Étape 3 – Confiance — **DONE**
-- Confiance de 40 à 100 % qui multiplie la vitesse max ; recalculée sur la progression (70 %) et le temps survécu (30 %) du parent, avec inertie.
+- Confiance qui multiplie la vitesse max, recalculée à chaque génération (règle remplacée à l'étape 13).
 - Une génération qui progresse peu roule moins vite que la précédente.
 - À l'arrivée, la voiture la plus rapide devient parent.
 
@@ -87,6 +90,23 @@ Règle de mise à jour : chaque nouvelle demande est ajoutée à la pile sous la
 - Le circuit actuel se choisit dans une vitrine (bouton « Choisir le circuit ») et non plus dans une liste déroulante.
 - Une carte par circuit (F1 puis niveaux) : miniature du tracé avec ligne de départ et obstacles, longueur et largeur en mètres, compétence, obstacles, voitures entraînées ici ; « Choisir ce circuit » / « Circuit actuel ✓ ».
 
+### Étape 13 – Nouvelle règle de confiance — **DONE**
+- Génération 0 sur un circuit : 100 % ; générations 1 et 2 : 50 %.
+- Ensuite, progrès entre les 2 générations précédentes (meilleur %, en points) : < 1 → −50 points ; < 2 → −25 ; < 4 → −12,5 ; ≥ 4 → 100 %. Plancher 50 %.
+- Circuit complété : 100 %.
+- État de confiance (`confidence`, `runs`, `lastProgress`) porté par les voitures et mémorisé par circuit au garage.
+
+### Étape 14 – Paramètres de la simulation et rayons — **DONE**
+- Vitrine des voitures : fiche technique retirée (numéro, livrée, vitesse, adhérence).
+- Bouton « Changer les paramètres de la simulation » → barre avec « Modifier le réseau de neurones » et « Ajouter des rayons à des degrés différents » (remplacée à l'étape 15 par deux boutons directs).
+- Rayons définis par une liste d'angles libres (`rayAngles`) ; un rayon = un neurone d'entrée (+ 1 neurone pour la vitesse). Appliquer change l'architecture et efface toutes les générations après confirmation.
+
+### Étape 15 – Menu épuré — **DONE**
+- Ordre : lignées en piste (avec un résumé), puis « Circuit : … » et « Voitures : … », puis « Réseau de neurones : … » et « Rayons : … », puis entraînement, vitesse, obstacles.
+- Plus de numéro d'étape ni de textes d'état dans le menu : l'information est dans le libellé des boutons, le résumé des lignées ou un bandeau en haut du circuit.
+- Garage déplacé dans la vitrine des voitures (Charger, Télécharger le modèle, Repartir de zéro) ; plus de liste des générations précédentes : la reprise part toujours de la dernière.
+- Longueur des rayons réglée dans l'éditeur de rayons ; « Retirer un obstacle » par clic sur le circuit.
+
 ## 2. Modèle (Reynolds)
 
 ```text
@@ -120,10 +140,11 @@ Règles de course (scène) : sortie de piste, immobilité, tours  (Car.applyRace
 | `brands.js` | Marques, modèles (livrée, numéro), tirage et mutation des paramètres |
 | `car-design.js` | Dessin de la voiture : simple sur le circuit, détaillé dans la vitrine |
 | `showroom.js` | Vitrine : sélection des voitures, menu « Confiance par circuit » |
+| `ray-editor.js` | Éditeur de rayons (angles libres) de la barre « Paramètres de la simulation » |
 | `network-config.js` | Topologie par défaut du réseau (fichier modifiable) |
 | `neural-network.js` | Réseau multicouche, mutation, copie, JSON |
 | `architecture.js` | Architecture du réseau choisie dans l'interface |
-| `confidence.js` | Calcul de la confiance (100 % quand le circuit est bouclé) |
+| `confidence.js` | Règle de confiance par circuit (100 %, 50 %, paliers selon le progrès, 100 % quand le circuit est bouclé) |
 | `evolution.js` | Lignées, fitness, générations |
 | `curriculum.js` | Enchaînement des niveaux d'entraînement |
 | `garage.js` | Champions par lignée et fiche par circuit (record, confiance, validation), import d'un modèle |

@@ -27,7 +27,7 @@ class Vector {
 export const SCRIPTS = [
   "random.js", "vehicle.js", "ray.js", "sensor-settings.js", "sim-speed.js", "circuits-data.js", "training-circuits-data.js", "circuit.js",
   "track-renderer.js", "circuit-showroom.js", "brands.js", "network-config.js", "neural-network.js", "architecture.js", "grass.js", "confidence.js", "car-design.js", "obstacle.js", "car.js",
-  "evolution.js", "garage.js", "curriculum.js", "showroom.js", "model-file.js", "network-viewer.js"
+  "evolution.js", "garage.js", "curriculum.js", "showroom.js", "model-file.js", "ray-editor.js", "network-viewer.js"
 ];
 
 // Stockage factice de type localStorage.
@@ -62,22 +62,25 @@ export function loadExample(files = SCRIPTS) {
     Car, STALL_FRAMES, TURN_MAX, LAUNCH_FRAMES, MAX_LAPS,
     findModel, createRandomSpecForModel, mutateSpec,
     NeuralNetwork, sigmoid, gaussian, NETWORK_CONFIG, layerSizesFromConfig, NETWORK_OUTPUTS,
+    MAX_RAYS, evenRayAngles, rayAnglesFromConfig, validateRayAngles,
+    addRayAngle, setRayAngle, removeRayAngle, inputLayerDescription,
     lineageKey, carFitness, compareCars, runIsBetter, bestCar, populationPerModel,
     createInitialPopulation, createTrainingPopulation, spawnFromParent, groupByLineage,
     nextGeneration, TARGET_POPULATION, MIN_PER_MODEL,
-    nextConfidence, confidenceAfterRun, performanceScore, runFinished,
+    initialConfidenceState, advanceConfidence, confidenceFromProgress, toConfidenceState, runFinished,
+    CONFIDENCE_EARLY, CONFIDENCE_EARLY_GENERATIONS, CONFIDENCE_STEPS,
     nextLineageGeneration, advanceStoppedLineages, LIVERIES, drawCarDesign,
-    selectionLabel, allModelEntries, circuitConfidenceRows, speedToKmh,
+    carsButtonLabel, allModelEntries, circuitConfidenceRows,
     SPEED_FACTORS, SIM_FRAME_BUDGET_MS, SIM_MAX_STEPS, SIM_SPEED_STORAGE_KEY,
     normalizeSpeedFactor, runSimulationSteps, SpeedMeter, loadSpeedFactor, saveSpeedFactor,
     MODEL_FILE_FORMAT, MODEL_FILE_VERSION, exportModelFile, modelFileName, validateBrainData,
     parseModelFile, modelMatchesArchitecture, describeModelArchitecture,
     Obstacle, OBSTACLE_PRESETS, OBSTACLES_STORAGE_KEY, OBSTACLE_MIN_POINTS, OBSTACLE_MAX_POINTS,
     polygonArea, polygonCentroid, validateShape, normalizeShape, pointInPolygon,
-    loadObstacles, saveObstacles, obstacleWalls,
+    loadObstacles, saveObstacles, obstacleWalls, obstacleIndexAt,
     allCircuitEntries, circuitLayout, thumbnailScale, circuitCardInfo, drawTrackThumbnail,
     CIRCUIT_THUMB_WIDTH, CIRCUIT_THUMB_HEIGHT, CONFIDENCE_START, CONFIDENCE_MIN, CONFIDENCE_MAX,
-    CONFIDENCE_INERTIA, CONFIDENCE_FULL_SECONDS,
+
     TRAINING_CIRCUITS, trainingLevelKeys, Curriculum,
     DEFAULT_RAY_LENGTH, MIN_RAY_LENGTH, MAX_RAY_LENGTH, RAY_LENGTH_STORAGE_KEY,
     currentRayLength, setRayLength, loadRayLength, saveRayLength,

@@ -79,7 +79,7 @@ class Garage {
     const circuitKey = car.circuit.key;
     const record = circuits[circuitKey] || (circuits[circuitKey] = {
       name: circuitName, bestProgress: 0, bestFrames: null, bestGeneration: null,
-      confidence: CONFIDENCE_START, trained: null
+      confidence: CONFIDENCE_START, confidenceState: initialConfidenceState(), trained: null
     });
     const run = { progress: Math.min(car.progress, car.raceLaps), framesAlive: car.framesAlive, raceLaps: car.raceLaps };
     const previous = { progress: record.bestProgress, framesAlive: record.bestFrames ?? Infinity, raceLaps: car.raceLaps };
@@ -88,7 +88,11 @@ class Garage {
       record.bestFrames = car.framesAlive;
       record.bestGeneration = car.generation;
     }
-    record.confidence = confidenceAfterRun(car.confidence, car.progress, car.framesAlive, car.raceLaps);
+    // Même calcul que la génération suivante (spawnFromParent) : la reprise sur
+    // ce circuit repart de cet état.
+    const finished = car.progress >= car.raceLaps;
+    record.confidenceState = advanceConfidence(car.spec.confidenceState ?? record.confidenceState, car.progress / car.raceLaps, finished);
+    record.confidence = record.confidenceState.confidence;
     if (car.progress >= car.raceLaps && !record.trained) {
       record.trained = { generation: car.generation, savedAt: now };
     }
@@ -101,6 +105,16 @@ class Garage {
   // Confiance mémorisée d'une lignée sur un circuit (null : jamais roulé dessus).
   circuitConfidence(key, circuitKey) {
     return this.circuitRecord(key, circuitKey)?.confidence ?? null;
+  }
+
+  // État de confiance complet (confidence.js) pour reprendre sur ce circuit ;
+  // null si la lignée n'y a jamais roulé. Une fiche ancienne sans état repart
+  // de sa confiance enregistrée.
+  circuitConfidenceState(key, circuitKey) {
+    const record = this.circuitRecord(key, circuitKey);
+    if (!record) return null;
+    if (record.confidenceState) return { ...record.confidenceState };
+    return { ...initialConfidenceState(), confidence: record.confidence ?? CONFIDENCE_START };
   }
 
   // Vrai si la lignée a déjà bouclé ce circuit : on ne peut plus l'y entraîner.
@@ -166,12 +180,14 @@ class Garage {
 
   // Supprime les lignées dont le cerveau n'a pas l'architecture donnée
   // (couches cachées + activation). Retourne le nombre de lignées supprimées.
-  removeIncompatible(hiddenLayers, hiddenActivation) {
+  // inputNodes (facultatif) : taille de la couche d'entrée attendue (rayons + vitesse).
+  removeIncompatible(hiddenLayers, hiddenActivation, inputNodes = null) {
     let removed = 0;
     for (const key of this.keys()) {
       const brain = this.lineages[key].latest?.brain;
       const hidden = brain ? brain.layers.slice(1, -1) : null;
       const same = brain && brain.hiddenActivation === hiddenActivation &&
+        (inputNodes === null || brain.layers[0] === inputNodes) &&
         hidden.length === hiddenLayers.length && hidden.every((n, i) => n === hiddenLayers[i]);
       if (!same) {
         delete this.lineages[key];

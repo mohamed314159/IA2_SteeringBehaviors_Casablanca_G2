@@ -21,14 +21,12 @@ function networkLayout(layers, width, height, margin) {
   });
 }
 
-// Libellés des entrées et sorties selon le nombre de rayons et l'ouverture.
-function networkLabels(layers, fovDegrees) {
-  const rays = layers[0] - 1;
-  const inputs = [];
-  for (let i = 0; i < rays; i++) {
-    const angle = rays === 1 ? 0 : -fovDegrees / 2 + (i * fovDegrees) / (rays - 1);
-    inputs.push(`rayon ${i + 1} (${angle >= 0 ? "+" : ""}${angle.toFixed(0)}°)`);
-  }
+// Libellés des entrées et sorties : `rays` est la liste des angles des rayons
+// (degrés) ou une ouverture totale (rayons répartis régulièrement).
+function networkLabels(layers, rays) {
+  const count = layers[0] - 1;
+  const angles = Array.isArray(rays) && rays.length === count ? rays : evenRayAngles(count, Number.isFinite(rays) ? rays : 120);
+  const inputs = angles.map((angle, i) => `rayon ${i + 1} (${angle >= 0 ? "+" : ""}${angle.toFixed(0)}°)`);
   inputs.push("vitesse");
   return { inputs, outputs: NETWORK_OUTPUTS.slice(0, layers[layers.length - 1]) };
 }
@@ -138,7 +136,7 @@ function addLayer() {
 function updateDraftText() {
   const current = architectureOf(currentNetworkConfig());
   const changed = !sameArchitecture(draft, current);
-  const layers = [currentNetworkConfig().rays + 1, ...draft.hiddenLayers, NETWORK_OUTPUTS.length];
+  const layers = [rayAnglesFromConfig(currentNetworkConfig()).length + 1, ...draft.hiddenLayers, NETWORK_OUTPUTS.length];
   viewUi.draftText.textContent = `Brouillon : ${layers.join(" → ")} (${draft.hiddenActivation})` +
     (changed ? " — non appliqué" : " — architecture en cours");
 }
@@ -164,7 +162,7 @@ function askConfirmation(architecture) {
   }
   viewUi.pending = architecture;
   const lineages = viewerGarage().keys().length;
-  viewUi.confirmText.textContent = `Appliquer ${[currentNetworkConfig().rays + 1, ...architecture.hiddenLayers, 2].join(" → ")} (${architecture.hiddenActivation}) ? ` +
+  viewUi.confirmText.textContent = `Appliquer ${[(architecture.rayAngles ?? rayAnglesFromConfig(currentNetworkConfig())).length + 1, ...architecture.hiddenLayers, 2].join(" → ")} (${architecture.hiddenActivation}) ? ` +
     `${lineages} lignée(s) sauvegardée(s) et toutes leurs générations seront effacées.`;
   viewUi.confirmBox.hidden = false;
 }
@@ -216,13 +214,13 @@ function loadSource(value) {
     if (value === "draft") {
       const config = { ...currentNetworkConfig(), ...draft };
       viewer.network = NeuralNetwork.fromConfig(config, createRng(1));
-      viewer.fov = config.rayFovDegrees;
+      viewer.fov = rayAnglesFromConfig(config);
       viewer.title = sameArchitecture(draft, architectureOf(currentNetworkConfig())) ? "Architecture en cours" : "Brouillon";
     } else {
       const { key, gen } = JSON.parse(value);
       const snapshot = viewerGarage().snapshot(key, gen);
       viewer.network = NeuralNetwork.fromJSON(snapshot.brain);
-      viewer.fov = snapshot.spec.rayFovDegrees ?? 120;
+      viewer.fov = snapshot.spec.rayAngles ?? snapshot.spec.rayFovDegrees ?? 120;
       viewer.title = `${key}, génération ${gen} (entraîné sur ${snapshot.circuit})`;
     }
   } catch (error) {

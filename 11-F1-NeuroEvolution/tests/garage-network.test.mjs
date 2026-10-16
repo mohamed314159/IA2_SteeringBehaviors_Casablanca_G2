@@ -37,7 +37,7 @@ test("layerSizesFromConfig : configuration invalide → message explicite", () =
 
 test("network-config.js fourni est valide", () => {
   const nn = ex.NeuralNetwork.fromConfig(ex.NETWORK_CONFIG, ex.createRng(1));
-  assert.equal(nn.inputNodes, ex.NETWORK_CONFIG.rays + 1);
+  assert.equal(nn.inputNodes, ex.rayAnglesFromConfig(ex.NETWORK_CONFIG).length + 1);
   assert.equal(nn.outputNodes, 2);
 });
 

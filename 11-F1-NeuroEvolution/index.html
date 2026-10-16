@@ -27,6 +27,7 @@
   <script src="car-design.js"></script>
   <script src="obstacle.js"></script>
   <script src="obstacle-editor.js"></script>
+  <script src="ray-editor.js"></script>
   <script src="car.js"></script>
   <script src="evolution.js"></script>
   <script src="garage.js"></script>
@@ -38,70 +39,80 @@
 
 <body>
   <main id="layout">
-    <aside id="menu">
+    <aside id="menu" aria-label="Menu">
       <h1>F1 Neuroévolution</h1>
-      <p class="step">Étape 12 : vitrine des circuits</p>
 
-      <h2>Circuit</h2>
-      <button id="circuitShowroomButton" type="button" class="secondary">Choisir le circuit</button>
-      <p id="currentCircuit" role="status">Circuit actuel : -</p>
+      <section aria-labelledby="lineagesTitle">
+        <h2 id="lineagesTitle">Lignées en piste</h2>
+        <p id="raceSummary" class="summary" role="status"></p>
+        <ul id="lineages"></ul>
+      </section>
 
-      <h2>Voitures à entraîner</h2>
-      <button id="showroomButton" type="button" class="secondary">Choisir les voitures</button>
-      <p id="selectionCount" role="status">0 voiture sélectionnée</p>
+      <div class="menu-buttons">
+        <button id="circuitShowroomButton" type="button" class="secondary">Circuit : -</button>
+        <button id="showroomButton" type="button" class="secondary">Voitures : aucune sélectionnée</button>
 
-      <label for="rayLengthSlider">Longueur des rayons : <span id="rayLengthValue">160 px</span></label>
-      <div class="ray-length">
-        <button id="rayShorterButton" type="button" class="small" aria-label="Raccourcir les rayons">−</button>
-        <input type="range" id="rayLengthSlider" min="40" max="300" step="5" value="160">
-        <button id="rayLongerButton" type="button" class="small" aria-label="Allonger les rayons">+</button>
-        <button id="rayResetButton" type="button" class="small">Par défaut</button>
-      </div>
+        <a id="networkLink" href="network.html" target="_blank" rel="noopener" class="button-like">Réseau de neurones</a>
+        <button id="rayEditorButton" type="button" class="secondary">Rayons</button>
 
-      <p class="label-like" id="speedLabel">Vitesse de simulation</p>
-      <div id="speedButtons" class="speed-buttons" role="group" aria-labelledby="speedLabel"></div>
-      <p id="speedEffective" class="step" role="status"></p>
-
-      <label class="inline"><input type="checkbox" id="raysCheckbox"> Rayons du leader</label>
-
-      <div class="buttons">
-        <button id="trainButton" type="button">Entraîner</button>
-        <button id="stopButton" type="button" class="secondary">Arrêter</button>
-      </div>
-      <button id="curriculumButton" type="button" class="curriculum">Faire entraîner la voiture dans des circuits d'entraînement</button>
-      <p id="levelInfo"></p>
-
-      <p class="topology">Réseau : <strong id="topologyValue">-</strong>
-        · <a href="network.html" target="_blank" rel="noopener">Voir / modifier le réseau</a></p>
-
-      <p>Générations terminées : <strong id="generationValue">-</strong> · En piste : <strong id="aliveValue">-</strong></p>
-
-      <h2>Lignées en piste</h2>
-      <ul id="lineages"></ul>
-
-      <h2>Obstacles</h2>
-      <div class="buttons">
-        <button id="drawObstacleButton" type="button" class="secondary">Dessiner un obstacle</button>
-        <button id="clearObstaclesButton" type="button" class="secondary">Tout effacer</button>
-      </div>
-      <p id="obstacleStatus" class="step" role="status"></p>
-      <ul id="obstacleList"></ul>
-
-      <h2>Garage</h2>
-      <button id="loadModelButton" type="button" class="secondary">Charger un modèle (.json)</button>
-      <input type="file" id="modelFileInput" accept=".json,application/json" hidden>
-      <div id="modelConfirm" class="confirm" hidden>
-        <p id="modelConfirmText"></p>
         <div class="buttons">
-          <button id="modelConfirmButton" type="button">Remplacer</button>
-          <button id="modelCancelButton" type="button" class="secondary">Annuler</button>
+          <button id="trainButton" type="button">Entraîner sur ce circuit</button>
+          <button id="stopButton" type="button" class="secondary">Arrêter</button>
         </div>
+        <button id="curriculumButton" type="button" class="curriculum">Parcours d'entraînement (5 niveaux)</button>
+
+        <div id="speedButtons" class="speed-buttons" role="group" aria-label="Vitesse de simulation"></div>
+        <button id="raysToggleButton" type="button" class="secondary" aria-pressed="true">Rayons du leader : affichés</button>
+
+        <div class="buttons">
+          <button id="drawObstacleButton" type="button" class="secondary">Dessiner un obstacle</button>
+          <button id="removeObstacleButton" type="button" class="secondary">Retirer un obstacle</button>
+        </div>
+        <button id="clearObstaclesButton" type="button" class="secondary">Retirer tous les obstacles</button>
       </div>
-      <p id="modelFileStatus" class="step" role="status"></p>
-      <ul id="garageList"></ul>
     </aside>
     <div id="canvas-container"></div>
   </main>
+
+  <dialog id="rayDialog" aria-labelledby="rayDialogTitle">
+    <div class="dialog-head">
+      <h2 id="rayDialogTitle">Rayons : angles et longueur</h2>
+      <button id="rayDialogClose" type="button" class="small">Fermer</button>
+    </div>
+    <p class="step">Un rayon = un neurone de la couche d'entrée ; le dernier neurone d'entrée reçoit la vitesse. 0° = droit devant, angle positif = vers la droite, négatif = vers la gauche. Appliquer de nouveaux rayons <strong>efface toutes les générations</strong>.</p>
+    <div class="obstacle-editor">
+      <canvas id="rayCanvas" role="img" aria-label="Aperçu de la voiture vue de dessus avec ses rayons et leurs angles"></canvas>
+      <div>
+        <ol id="rayList" class="ray-list"></ol>
+        <label for="rayAngleInput">Nouvel angle (°, de -180 à 180)</label>
+        <div class="buttons">
+          <input type="number" id="rayAngleInput" min="-180" max="180" step="1" value="90">
+          <button id="rayAddButton" type="button" class="small">+ Ajouter le rayon</button>
+        </div>
+        <label for="rayLengthSlider">Longueur des rayons : <span id="rayLengthValue">160 px</span></label>
+        <div class="ray-length">
+          <button id="rayShorterButton" type="button" class="small" aria-label="Raccourcir les rayons">−</button>
+          <input type="range" id="rayLengthSlider" min="40" max="300" step="5" value="160">
+          <button id="rayLongerButton" type="button" class="small" aria-label="Allonger les rayons">+</button>
+          <button id="rayLengthDefaultButton" type="button" class="small">Par défaut</button>
+        </div>
+        <p class="step">La longueur s'applique tout de suite, sans effacer les générations.</p>
+        <p id="rayInfo" class="step"></p>
+        <p id="rayStatus" class="step" role="status"></p>
+        <div class="buttons">
+          <button id="rayApplyButton" type="button" class="place">Appliquer</button>
+          <button id="rayResetButton" type="button" class="small">Annuler les changements</button>
+        </div>
+        <div id="rayConfirm" class="confirm" hidden>
+          <p id="rayConfirmText"></p>
+          <div class="buttons">
+            <button id="rayConfirmButton" type="button" class="place">Confirmer et effacer</button>
+            <button id="rayCancelButton" type="button" class="small">Annuler</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </dialog>
 
   <dialog id="circuitDialog" aria-labelledby="circuitDialogTitle">
     <div class="dialog-head">
@@ -117,7 +128,18 @@
       <h2 id="showroomTitle">Vitrine des voitures</h2>
       <button id="showroomClose" type="button" class="small">Fermer</button>
     </div>
-    <p class="step">Sélectionnez les voitures à entraîner. « Confiance par circuit » montre la confiance de la voiture sur chaque circuit.</p>
+    <div class="buttons">
+      <button id="loadModelButton" type="button" class="small">Charger un modèle (.json)</button>
+    </div>
+    <input type="file" id="modelFileInput" accept=".json,application/json" hidden>
+    <div id="modelConfirm" class="confirm" hidden>
+      <p id="modelConfirmText"></p>
+      <div class="buttons">
+        <button id="modelConfirmButton" type="button" class="place">Remplacer</button>
+        <button id="modelCancelButton" type="button" class="small">Annuler</button>
+      </div>
+    </div>
+    <p id="modelFileStatus" class="step" role="status"></p>
     <div id="showroomGrid" class="showroom-grid"></div>
   </dialog>
 

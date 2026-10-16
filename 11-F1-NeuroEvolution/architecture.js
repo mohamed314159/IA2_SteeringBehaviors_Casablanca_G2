@@ -1,25 +1,34 @@
-// Architecture du réseau choisie dans l'interface (network.html).
-// Elle remplace hiddenLayers / hiddenActivation de network-config.js et est
+// Architecture du réseau choisie dans l'interface (network.html, éditeur de rayons).
+// Elle remplace rayAngles / hiddenLayers / hiddenActivation de network-config.js et est
 // mémorisée dans le navigateur. Changer d'architecture efface toutes les
 // générations du garage : les cerveaux sauvegardés n'ont plus la bonne forme.
 const ARCHITECTURE_STORAGE_KEY = "f1-neuroevolution-architecture-v1";
 const MAX_HIDDEN_LAYERS = 6;
 
-let architectureOverride = null;   // { hiddenLayers, hiddenActivation } ou null
+let architectureOverride = null;   // { rayAngles, hiddenLayers, hiddenActivation } ou null
 
 // Configuration réellement utilisée par les nouvelles voitures.
 function currentNetworkConfig() {
   return architectureOverride ? { ...NETWORK_CONFIG, ...architectureOverride } : NETWORK_CONFIG;
 }
 
+// Architecture = angles des rayons (donc couche d'entrée) + couches cachées + activation.
 function architectureOf(config) {
-  return { hiddenLayers: config.hiddenLayers.slice(), hiddenActivation: config.hiddenActivation };
+  return {
+    rayAngles: rayAnglesFromConfig(config),
+    hiddenLayers: config.hiddenLayers.slice(),
+    hiddenActivation: config.hiddenActivation
+  };
+}
+
+function sameNumbers(a, b) {
+  return a.length === b.length && a.every((n, i) => n === b[i]);
 }
 
 function sameArchitecture(a, b) {
   return a.hiddenActivation === b.hiddenActivation &&
-    a.hiddenLayers.length === b.hiddenLayers.length &&
-    a.hiddenLayers.every((n, i) => n === b.hiddenLayers[i]);
+    sameNumbers(a.hiddenLayers, b.hiddenLayers) &&
+    sameNumbers(a.rayAngles ?? rayAnglesFromConfig(currentNetworkConfig()), b.rayAngles ?? rayAnglesFromConfig(currentNetworkConfig()));
 }
 
 // Vérifie une architecture (lève une erreur explicite) et en retourne une copie propre.
@@ -31,6 +40,7 @@ function validateArchitecture(architecture) {
     throw new Error(`Architecture invalide : ${MAX_HIDDEN_LAYERS} couches cachées au maximum`);
   }
   const clean = {
+    rayAngles: (architecture.rayAngles ?? rayAnglesFromConfig(currentNetworkConfig())).map(Number),
     hiddenLayers: architecture.hiddenLayers.map(Number),
     hiddenActivation: architecture.hiddenActivation
   };

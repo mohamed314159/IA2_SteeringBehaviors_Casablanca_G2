@@ -37,7 +37,12 @@ class Car extends Vehicle {
     this.brain = brain || NeuralNetwork.fromConfig(currentNetworkConfig(), rng);
     this.generation = generation;
     this.rayCount = this.brain.inputNodes - 1;
-    this.rayFov = ((spec.rayFovDegrees ?? currentNetworkConfig().rayFovDegrees) * Math.PI) / 180;
+    // Angles des rayons (spec.rayAngles, en degrés), sinon répartis sur une ouverture.
+    const angles = Array.isArray(spec.rayAngles) && spec.rayAngles.length === this.rayCount
+      ? spec.rayAngles
+      : evenRayAngles(this.rayCount, spec.rayFovDegrees ?? 120);
+    this.rayOffsets = angles.map((a) => (a * Math.PI) / 180);
+    this.rayFov = Math.max(...this.rayOffsets) - Math.min(...this.rayOffsets);
     this.rays = [];
     for (let i = 0; i < this.rayCount; i++) this.rays.push(new Ray(start.heading));
     this.rayDistances = new Array(this.rayCount).fill(this.sightDistance);
@@ -59,8 +64,7 @@ class Car extends Vehicle {
   // Angle absolu du rayon i, réparti symétriquement autour du cap
   // (un rayon unique regarde droit devant).
   rayAngle(i) {
-    if (this.rayCount === 1) return this.heading;
-    return this.heading - this.rayFov / 2 + (i * this.rayFov) / (this.rayCount - 1);
+    return this.heading + this.rayOffsets[i];
   }
 
   // Lance les rayons contre les murs proches. Retourne les entrées du

@@ -55,14 +55,15 @@ function runFinished(run) {
 }
 
 // Génération 0 d'une lignée : cerveaux (architecture courante) et
-// paramètres tirés au hasard ; confiance du circuit (départ par défaut).
-function createRandomLineage(circuit, brand, model, count, rng, confidence = CONFIDENCE_START) {
+// paramètres tirés au hasard ; état de confiance du circuit (départ : 100 %).
+function createRandomLineage(circuit, brand, model, count, rng, confidenceState = initialConfidenceState()) {
   const cars = [];
   for (let i = 0; i < count; i++) {
     const spec = {
       ...createRandomSpecForModel(brand, model, rng),
-      rayFovDegrees: currentNetworkConfig().rayFovDegrees,
-      confidence
+      rayAngles: rayAnglesFromConfig(currentNetworkConfig()),
+      confidence: confidenceState.confidence,
+      confidenceState: { ...confidenceState }
     };
     cars.push(new Car(circuit, spec, randomStartOffset(circuit, rng), null, 0, rng));
   }
@@ -71,19 +72,18 @@ function createRandomLineage(circuit, brand, model, count, rng, confidence = CON
 
 // Descendance d'un parent : 1 élite (même cerveau, mêmes paramètres, même
 // place sur la grille) + des enfants mutés. Toute la génération reçoit la
-// confiance du circuit : par défaut celle calculée à partir des résultats du
-// parent sur ce circuit (confidence.js) ; elle roule moins vite si le parent a
-// peu progressé ou peu survécu. `confidence` l'impose (reprise, autre circuit).
-// parent : { spec, brain (NeuralNetwork), generation, startOffset, progress, framesAlive }.
-function spawnFromParent(circuit, parent, count, rng, mutationRate = MUTATION_RATE, confidence = null) {
+// confiance du circuit (confidence.js) : par défaut, l'état du parent avancé
+// d'une génération selon son résultat (progrès par rapport à la génération
+// d'avant, tour bouclé). `confidenceState` l'impose (reprise, autre circuit).
+// parent : { spec, brain (NeuralNetwork), generation, startOffset, progress }.
+function spawnFromParent(circuit, parent, count, rng, mutationRate = MUTATION_RATE, confidenceState = null) {
   const generation = parent.generation + 1;
-  if (confidence === null) {
-    confidence = nextConfidence(parent.spec.confidence ?? CONFIDENCE_START, parent.progress, parent.framesAlive);
-  }
-  const cars = [new Car(circuit, { ...parent.spec, confidence }, parent.startOffset, parent.brain.copy(), generation, rng)];
+  const state = confidenceState ?? advanceConfidence(parent.spec.confidenceState, parent.progress, runFinished(parent));
+  const confidence = state.confidence;
+  const cars = [new Car(circuit, { ...parent.spec, confidence, confidenceState: { ...state } }, parent.startOffset, parent.brain.copy(), generation, rng)];
   for (let i = 1; i < count; i++) {
     const brain = parent.brain.copy().mutate(mutationRate, rng);
-    const spec = { ...mutateSpec(parent.spec, rng, SPEC_MUTATION), confidence };
+    const spec = { ...mutateSpec(parent.spec, rng, SPEC_MUTATION), confidence, confidenceState: { ...state } };
     cars.push(new Car(circuit, spec, randomStartOffset(circuit, rng), brain, generation, rng));
   }
   return cars;
@@ -92,15 +92,15 @@ function spawnFromParent(circuit, parent, count, rng, mutationRate = MUTATION_RA
 // Population d'entraînement pour les modèles cochés ([{ brand, model }]).
 // findSnapshot(key) retourne un snapshot du garage pour reprendre une lignée
 // à partir de la génération choisie, ou null pour repartir de la génération 0.
-// findConfidence(key) retourne la confiance mémorisée sur CE circuit (null :
-// jamais roulé dessus → confiance de départ).
+// findConfidence(key) retourne l'état de confiance mémorisé sur CE circuit
+// (null : jamais roulé dessus → départ à 100 %, génération 0 du circuit).
 function createTrainingPopulation(circuit, models, rng, findSnapshot = () => null, findConfidence = () => null) {
   const perModel = populationPerModel(models.length);
   const cars = [];
   for (const { brand, model } of models) {
     const key = lineageKey({ brand, model });
     const snapshot = findSnapshot(key);
-    const confidence = findConfidence(key) ?? CONFIDENCE_START;
+    const confidenceState = toConfidenceState(findConfidence(key));
     if (snapshot) {
       const parent = {
         spec: snapshot.spec,
@@ -110,9 +110,9 @@ function createTrainingPopulation(circuit, models, rng, findSnapshot = () => nul
         progress: snapshot.progress,
         framesAlive: snapshot.framesAlive
       };
-      cars.push(...spawnFromParent(circuit, parent, perModel, rng, MUTATION_RATE, confidence));
+      cars.push(...spawnFromParent(circuit, parent, perModel, rng, MUTATION_RATE, confidenceState));
     } else {
-      cars.push(...createRandomLineage(circuit, brand, model, perModel, rng, confidence));
+      cars.push(...createRandomLineage(circuit, brand, model, perModel, rng, confidenceState));
     }
   }
   return cars;

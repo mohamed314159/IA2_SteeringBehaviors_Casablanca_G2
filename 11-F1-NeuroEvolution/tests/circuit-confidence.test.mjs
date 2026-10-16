@@ -43,7 +43,9 @@ test("fiche du circuit : meilleur pourcentage, confiance et validation, circuit 
   assert.ok(Math.abs(record.bestProgress - 0.4) < 1e-9);
   assert.equal(record.bestGeneration, 0);
   assert.equal(record.trained, null);
-  assert.equal(record.confidence, ex.nextConfidence(ex.CONFIDENCE_START, 0.4, 600));
+  assert.equal(record.confidence, 0.5); // génération suivante = 1re après le départ → 50 %
+  assert.equal(record.confidenceState.runs, 1);
+  assert.ok(Math.abs(record.confidenceState.lastProgress - 0.4) < 1e-9);
   assert.equal(garage.circuitRecord(KEY_A, "spa"), null); // autre circuit : rien
 });
 
@@ -67,19 +69,36 @@ test("le pourcentage dépend du circuit sélectionné", () => {
   garage.recordChampion(runOn(spa, A, 0.25, 600, 1), "Spa-Francorchamps (Belgique)");
   assert.ok(Math.abs(garage.circuitRecord(KEY_A, "monza").bestProgress - 0.8) < 1e-9);
   assert.ok(Math.abs(garage.circuitRecord(KEY_A, "spa").bestProgress - 0.25) < 1e-9);
-  // Les confiances sont séparées elles aussi.
-  assert.notEqual(garage.circuitConfidence(KEY_A, "monza"), garage.circuitConfidence(KEY_A, "spa"));
+  // Les états de confiance sont séparés eux aussi (la voiture porte l'état de sa génération).
+  const second = runOn(monza, A, 0.9, 600, 2);
+  second.spec.confidenceState = garage.circuitConfidenceState(KEY_A, "monza");
+  garage.recordChampion(second, "Monza (Italie)");
+  assert.equal(garage.circuitConfidenceState(KEY_A, "monza").runs, 2);
+  assert.equal(garage.circuitConfidenceState(KEY_A, "spa").runs, 1);
 });
 
-test("fiche : le record ne régresse pas, la confiance suit la dernière génération", () => {
+test("fiche : le record ne régresse pas, la confiance suit la règle des générations", () => {
   const garage = new ex.Garage(createMemoryStorage());
-  garage.recordChampion(runOn(monza, A, 0.7, 600, 0), "Monza");
-  const after0 = garage.circuitConfidence(KEY_A, "monza");
-  garage.recordChampion(runOn(monza, A, 0.1, 60, 1), "Monza");
+  // La voiture porte l'état de confiance de sa génération (comme en course réelle).
+  const run = (p, gen, state) => {
+    const car = runOn(monza, A, p, 600, gen);
+    car.spec.confidenceState = state;
+    garage.recordChampion(car, "Monza");
+    return garage.circuitConfidenceState(KEY_A, "monza");
+  };
+  let state = run(0.7, 0, ex.initialConfidenceState());
+  assert.equal(state.confidence, 0.5);  // génération 1 : 50 %
+  state = run(0.1, 1, state);
+  assert.equal(state.confidence, 0.5);  // génération 2 : 50 %
+  state = run(0.2, 2, state);           // génération 3 : gén 2 - gén 1 = +10 points → 100 %
+  assert.equal(state.confidence, 1);
+  state = run(0.215, 3, state);         // +1,5 point → baisse de 25 points
+  assert.equal(state.confidence, 0.75);
+  state = run(0.217, 4, state);         // +0,2 point → baisse de 50 points, plancher 50 %
+  assert.equal(state.confidence, 0.5);
   const record = garage.circuitRecord(KEY_A, "monza");
   assert.ok(Math.abs(record.bestProgress - 0.7) < 1e-9);
   assert.equal(record.bestGeneration, 0);
-  assert.ok(record.confidence < after0); // génération ratée → moins de confiance
 });
 
 test("fiche : à 100 %, l'arrivée la plus rapide devient le record", () => {
@@ -116,7 +135,7 @@ test("reprise sur un circuit : confiance mémorisée de ce circuit", () => {
   garage.recordChampion(runOn(monza, A, 0.9, 25 * SECOND, 7), "Monza");
   const expected = garage.circuitConfidence(KEY_A, "monza");
   const cars = ex.createTrainingPopulation(monza, [A], ex.createRng(2),
-    (k) => garage.snapshot(k), (k) => garage.circuitConfidence(k, "monza"));
+    (k) => garage.snapshot(k), (k) => garage.circuitConfidenceState(k, "monza"));
   for (const car of cars) {
     assert.equal(car.confidence, expected);
     assert.equal(car.generation, 8);

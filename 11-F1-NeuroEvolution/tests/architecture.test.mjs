@@ -22,6 +22,7 @@ function garageWithLineage(storage) {
 test("sans réglage dans l'interface, l'architecture est celle de network-config.js", () => {
   assert.equal(ex.currentNetworkConfig(), ex.NETWORK_CONFIG);
   assert.deepEqual(plain(ex.architectureOf(ex.NETWORK_CONFIG)), plain({
+    rayAngles: ex.NETWORK_CONFIG.rayAngles,
     hiddenLayers: ex.NETWORK_CONFIG.hiddenLayers, hiddenActivation: ex.NETWORK_CONFIG.hiddenActivation
   }));
 });
@@ -33,10 +34,11 @@ test("appliquer une nouvelle architecture : mémorisée et toutes les générati
   assert.deepEqual(plain(result), { changed: true, erased: 1 });
   assert.deepEqual(plain(garage.keys()), []);
   assert.deepEqual(plain(new ex.Garage(storage).keys()), []); // effacement persistant
-  assert.deepEqual(plain(JSON.parse(storage.getItem(ex.ARCHITECTURE_STORAGE_KEY))), { hiddenLayers: [16, 8], hiddenActivation: "relu" });
+  assert.deepEqual(plain(JSON.parse(storage.getItem(ex.ARCHITECTURE_STORAGE_KEY))),
+    { rayAngles: [-60, -30, 0, 30, 60], hiddenLayers: [16, 8], hiddenActivation: "relu" });
   const config = ex.currentNetworkConfig();
   assert.deepEqual(plain(config.hiddenLayers), [16, 8]);
-  assert.equal(config.rays, ex.NETWORK_CONFIG.rays); // les entrées ne changent pas
+  assert.deepEqual(plain(ex.rayAnglesFromConfig(config)), plain(ex.rayAnglesFromConfig(ex.NETWORK_CONFIG))); // les rayons ne changent pas
 });
 
 test("les nouvelles voitures utilisent l'architecture appliquée", () => {
@@ -44,7 +46,7 @@ test("les nouvelles voitures utilisent l'architecture appliquée", () => {
   ex.applyArchitecture({ hiddenLayers: [12, 6, 4], hiddenActivation: "tanh" }, storage, new ex.Garage(storage));
   const cars = ex.createTrainingPopulation(monza, [MODEL], ex.createRng(2));
   for (const car of cars) {
-    assert.deepEqual(plain(car.brain.layers), [ex.NETWORK_CONFIG.rays + 1, 12, 6, 4, 2]);
+    assert.deepEqual(plain(car.brain.layers), [ex.rayAnglesFromConfig(ex.NETWORK_CONFIG).length + 1, 12, 6, 4, 2]);
     assert.equal(car.brain.hiddenActivation, "tanh");
   }
   const inputs = cars[0].sense();
@@ -56,7 +58,7 @@ test("ajouter puis supprimer des couches : 0 couche cachée possible", () => {
   const garage = new ex.Garage(storage);
   ex.applyArchitecture({ hiddenLayers: [], hiddenActivation: "sigmoid" }, storage, garage);
   const car = new ex.Car(monza, { ...ex.createRandomSpecForModel("Tiyoti", "Supraa GT", ex.createRng(1)) });
-  assert.deepEqual(plain(car.brain.layers), [ex.NETWORK_CONFIG.rays + 1, 2]);
+  assert.deepEqual(plain(car.brain.layers), [ex.rayAnglesFromConfig(ex.NETWORK_CONFIG).length + 1, 2]);
 });
 
 test("même architecture que l'actuelle : rien n'est effacé", () => {

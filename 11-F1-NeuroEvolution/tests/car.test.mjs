@@ -29,7 +29,7 @@ test("départ sur la ligne, dans le sens de course, avec décalage latéral", ()
 test("sense : 5 rayons + vitesse, entrées dans [0, 1], murs détectés", () => {
   const car = new ex.Car(monza, spec);
   const inputs = car.sense();
-  assert.equal(car.rayCount, ex.NETWORK_CONFIG.rays);
+  assert.equal(car.rayCount, ex.rayAnglesFromConfig(ex.NETWORK_CONFIG).length);
   assert.equal(inputs.length, car.rayCount + 1);
   for (const v of inputs) assert.ok(v >= 0 && v <= 1);
   // Les rayons latéraux (±60°) voient les bords de la piste de 44 px.
