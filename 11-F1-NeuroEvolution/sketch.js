@@ -37,6 +37,7 @@ let canvasNotice = null;           // message temporaire sur le circuit { text, 
 const NOTICE_DURATION_MS = 4000;
 const OBSTACLE_ROTATION_STEP = Math.PI / 12;   // touche R : +15°
 const speedMeter = new SpeedMeter();
+const finishFlames = new FinishFlames(createRng(Date.now() + 1));   // flammes de la ligne d'arrivée (finish-flames.js)
 
 function setup() {
   const canvas = createCanvas(CANVAS_WIDTH, CANVAS_HEIGHT);
@@ -367,6 +368,7 @@ function buildCircuit(key) {
     pixelsPerMeter: TRACK_WIDTH / F1_TRACK_WIDTH_M
   });
   buildTrackLayer();
+  finishFlames.clear();
   placing = null;
   removingObstacle = false;
   obstacles = loadObstacles(safeLocalStorage(), key);
@@ -483,6 +485,8 @@ function draw() {
   if (demo) drawDemoCars();
   else if (training) drawTrainingCars();
   else if (!placing && !removingObstacle) drawIdleMessage();
+  finishFlames.update();
+  finishFlames.show();
   drawPlacementPreview();
   drawCanvasNotice();
   if (frameCount % PANEL_EVERY === 0) updatePanel();
@@ -494,11 +498,13 @@ function draw() {
 function simulationStep() {
   if (demo) {
     for (const car of cars) car.drive(obstacleWallList, obstacles);
+    finishFlames.detect(cars, circuit);
     if (cars.every((car) => !car.racing)) restartDemo();
     return true;
   }
   if (!training) return false;
   for (const car of cars) car.drive(obstacleWallList, obstacles);
+  finishFlames.detect(cars, circuit);   // avant le remplacement des lignées terminées
   advanceLineages();
   return training || demo;
 }

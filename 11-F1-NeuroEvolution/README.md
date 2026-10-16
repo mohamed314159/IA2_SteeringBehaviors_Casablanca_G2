@@ -25,7 +25,7 @@ Le détail de chaque étape et l'architecture du projet sont dans [ARCHITECTURE.
 | 15 | Menu épuré : lignées en piste en haut, puis uniquement des boutons ; garage dans la vitrine des voitures ; longueur des rayons dans l'éditeur de rayons | ✅ |
 | 16 | Vitrine des obstacles : obstacles de série, prototypes dessinés (`proto_1`, `proto_2`…), placement depuis la vitrine ou au hasard (types et nombres choisis) | ✅ |
 | 17 | Bouton en haut à droite : retirer le décor d'herbe (rendu plus léger) | ✅ |
-| 18 | Flammes sur la ligne d'arrivée quand une voiture la franchit | à faire |
+| 18 | Flammes sur la ligne d'arrivée quand une voiture la franchit | ✅ |
 | 19 | Circuits d'entraînement actuels plus petits : surface divisée par 4 | à faire |
 | 20 | 5 nouveaux circuits d'entraînement pour les bases de la course (drift à gauche, drift à droite…) | à faire |
 | 21 | Plus de circuits de Formule 1 | à faire |
@@ -157,6 +157,14 @@ Ce que le mode léger allège, en pratique (rendu Canvas 2D de p5, donc surtout 
 - **Construction du décor** (au chargement, changement de circuit, parcours d'entraînement) : mesurée à 871 ms avec l'herbe contre 14 ms en mode léger.
 - **Chaque image** : le décor est déjà pré-rendu et simplement recopié, l'herbe ne coûte donc rien de plus à densité égale. Le gain par image vient de la densité de pixels 1 sur un écran haute résolution (Windows à 125 % ou 150 %, écran Retina) : 1,56 à 4 fois moins de pixels. Sur un écran à 100 %, il n'y a pas de gain par image.
 
+## Flammes sur la ligne d'arrivée (`finish-flames.js`)
+
+Quand une voiture boucle un tour (entraînement, parcours ou démonstration), la ligne de départ/arrivée s'embrase : des particules naissent sur toute la largeur de la ligne et montent vers le haut de l'écran en passant du jaune à l'orange puis au rouge, avant de disparaître (dessin additif).
+
+- **Détection** à chaque pas de simulation, d'après le compteur de tours (`LapTracker.laps`) : un tour de plus = un passage. Un même tour n'est jamais compté deux fois (reculer puis refranchir la ligne ne rallume rien). Elle a lieu avant que la lignée terminée soit remplacée, donc aucun passage n'est perdu en accéléré.
+- **Animation** une fois par image : la durée est la même quel que soit le facteur de vitesse.
+- Paramètres : émission pendant 40 images après un passage (`FLAME_EMIT_FRAMES`), 8 particules par image, vie de 25 à 55 images, montée de 0,5 à 2,4 px/image, diamètre de 7 à 15 px, 400 particules au plus (passages rapprochés en accéléré). Changer de circuit éteint les flammes.
+
 ## Modèles en fichier (`model-file.js`)
 
 Dans la vitrine des voitures :
@@ -254,7 +262,7 @@ Une configuration invalide est refusée avec un message (bandeau du circuit). `n
 
 ## Fichiers
 
-`vehicle.js` (base protégée), `car.js` (`Car extends Vehicle`), `network-config.js`, `neural-network.js`, `architecture.js`, `confidence.js`, `evolution.js`, `training-circuits-data.js`, `curriculum.js`, `garage.js`, `network.html` + `network-viewer.js`, `ray.js`, `ray-editor.js`, `sensor-settings.js`, `sim-speed.js`, `car-design.js`, `showroom.js`, `circuit-showroom.js`, `model-file.js`, `obstacle.js`, `obstacle-editor.js`, `obstacle-catalog.js`, `obstacle-placement.js`, `obstacle-showroom.js`, `circuit.js` (géométrie, `LapTracker`), `circuits-data.js`, `brands.js`, `random.js` (RNG à graine), `grass.js`, `decor.js`, `track-renderer.js`, `sketch.js`.
+`vehicle.js` (base protégée), `car.js` (`Car extends Vehicle`), `network-config.js`, `neural-network.js`, `architecture.js`, `confidence.js`, `evolution.js`, `training-circuits-data.js`, `curriculum.js`, `garage.js`, `network.html` + `network-viewer.js`, `ray.js`, `ray-editor.js`, `sensor-settings.js`, `sim-speed.js`, `car-design.js`, `showroom.js`, `circuit-showroom.js`, `model-file.js`, `obstacle.js`, `obstacle-editor.js`, `obstacle-catalog.js`, `obstacle-placement.js`, `obstacle-showroom.js`, `circuit.js` (géométrie, `LapTracker`), `circuits-data.js`, `brands.js`, `random.js` (RNG à graine), `grass.js`, `decor.js`, `track-renderer.js`, `finish-flames.js`, `sketch.js`.
 
 ## Tests
 

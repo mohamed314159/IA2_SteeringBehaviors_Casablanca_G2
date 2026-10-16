@@ -26,7 +26,7 @@ class Vector {
 
 export const SCRIPTS = [
   "random.js", "vehicle.js", "ray.js", "sensor-settings.js", "sim-speed.js", "circuits-data.js", "training-circuits-data.js", "circuit.js",
-  "track-renderer.js", "circuit-showroom.js", "brands.js", "network-config.js", "neural-network.js", "architecture.js", "grass.js", "decor.js", "confidence.js", "car-design.js", "obstacle.js",
+  "track-renderer.js", "finish-flames.js", "circuit-showroom.js", "brands.js", "network-config.js", "neural-network.js", "architecture.js", "grass.js", "decor.js", "confidence.js", "car-design.js", "obstacle.js",
   "obstacle-catalog.js", "obstacle-placement.js", "obstacle-showroom.js", "car.js",
   "evolution.js", "garage.js", "curriculum.js", "showroom.js", "model-file.js", "ray-editor.js", "network-viewer.js"
 ];
@@ -62,6 +62,8 @@ export function loadExample(files = SCRIPTS, globals = {}) {
     projectOnSegment, segmentsIntersect, wrapArcDelta,
     F1_CAR_LENGTH_M, F1_CAR_WIDTH_M, F1_TRACK_WIDTH_M,
     CAR_BRANDS, createRandomCarSpec, GRASS_PALETTE, generateGrassTexels, drawGrass,
+    FLAME_EMIT_FRAMES, FLAME_PER_FRAME, FLAME_MAX_PARTICLES, FLAME_LIFE_MIN, FLAME_LIFE_MAX,
+    FLAME_RISE_MIN, FLAME_RISE_MAX, finishLine, flameColor, FinishFlames,
     DECOR_STORAGE_KEY, DECOR_GRASS, DECOR_LIGHT, LIGHT_BACKGROUND, normalizeDecor, toggledDecor,
     decorPixelDensity, decorButtonLabel, loadDecor, saveDecor, drawDecorBackground, drawTrackLayer,
     Car, STALL_FRAMES, TURN_MAX, LAUNCH_FRAMES, MAX_LAPS,

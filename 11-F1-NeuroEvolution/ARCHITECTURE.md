@@ -25,7 +25,7 @@ Règle de mise à jour : chaque nouvelle demande est ajoutée à la pile sous la
 | 15 | Menu épuré : lignées en haut, uniquement des boutons ; garage dans la vitrine des voitures ; longueur des rayons dans l'éditeur de rayons | **DONE** |
 | 16 | Vitrine des obstacles : obstacles dessinés enregistrés comme prototypes (`proto_1`, `proto_2`…), obstacles de série déjà dessinés, placement depuis la vitrine, placement aléatoire (types et nombres choisis dans la vitrine) | **DONE** |
 | 17 | Bouton en haut à droite de l'écran : retirer le décor d'herbe pour un rendu plus léger | **DONE** |
-| 18 | Effet de flammes sur la ligne d'arrivée quand une voiture la franchit | à faire |
+| 18 | Effet de flammes sur la ligne d'arrivée quand une voiture la franchit | **DONE** |
 | 19 | Circuits d'entraînement actuels plus petits : surface divisée par 4 | à faire |
 | 20 | 5 nouveaux circuits d'entraînement pour les bases de la course (drift à gauche, drift à droite…) | à faire |
 | 21 | Plus de circuits de Formule 1 | à faire |
@@ -126,8 +126,9 @@ Règle de mise à jour : chaque nouvelle demande est ajoutée à la pile sous la
 - Mode léger : fond uni au lieu de l'herbe texturée et densité de pixels 1 (canevas + décor) ; la piste est identique.
 - Seul le décor pré-rendu est reconstruit (`buildTrackLayer`) : l'entraînement continue. Construction mesurée : 871 ms (herbe) → 14 ms (léger) ; par image, le gain dépend de la densité de l'écran.
 
-### Étape 18 – Flammes sur la ligne d'arrivée — à faire
-- Effet de flammes sur la ligne d'arrivée lorsqu'une voiture la franchit.
+### Étape 18 – Flammes sur la ligne d'arrivée — **DONE**
+- `FinishFlames` (`finish-flames.js`) : effet décoratif, pas un véhicule. Particules nées sur la ligne (bord gauche → bord droit au point de départ), montant vers le haut de l'écran, jaune → orange → rouge → transparent, dessin additif isolé par `push()` / `pop()`.
+- Détection à chaque pas de simulation (un tour de plus selon `LapTracker`, jamais recompté), avant le remplacement des lignées ; animation une fois par image, donc indépendante de l'accélération. Émission 40 images, plafond 400 particules, extinction au changement de circuit.
 
 ## 2. Modèle (Reynolds)
 
@@ -159,6 +160,7 @@ Règles de course (scène) : sortie de piste, immobilité, tours  (Car.applyRace
 | `circuit.js` | Géométrie : ligne médiane, bords, grille spatiale, projection, `LapTracker` |
 | `circuits-data.js` / `training-circuits-data.js` | Tracés F1 / niveaux d'entraînement |
 | `track-renderer.js`, `grass.js` | Décor statique dessiné une seule fois |
+| `finish-flames.js` | Flammes sur la ligne d'arrivée : détection des tours bouclés, particules, dessin |
 | `decor.js` | Décor herbe ou léger (fond uni, densité de pixels 1), mémorisé |
 | `brands.js` | Marques, modèles (livrée, numéro), tirage et mutation des paramètres |
 | `car-design.js` | Dessin de la voiture : simple sur le circuit, détaillé dans la vitrine |
@@ -189,7 +191,8 @@ Règles de course (scène) : sortie de piste, immobilité, tours  (Car.applyRace
 1. Afficher le décor pré-rendu et les obstacles.
 2. Répéter N pas de simulation selon la vitesse choisie (budget de 12 ms, `runSimulationSteps`). Un pas : pour chaque voiture en course, `sense()` (murs du circuit + côtés des obstacles) → `think()` → `applyForce()` → `update()` (une seule intégration) → règles de course (dont contact avec un obstacle).
    À la fin de chaque pas, pour chaque lignée dont toutes les voitures sont arrêtées (sans attendre les autres) : sauvegarde du champion (et fiche du circuit), retrait si elle a bouclé le tour, sinon sa génération suivante ; parcours d'entraînement éventuel.
-3. Dessiner les voitures une seule fois (le leader avec ses rayons).
+   Après le déplacement des voitures : détection des tours bouclés (flammes de la ligne d'arrivée).
+3. Dessiner les voitures une seule fois (le leader avec ses rayons), puis animer et dessiner les flammes de la ligne d'arrivée.
 4. Rafraîchir le panneau et la vitesse atteinte toutes les 10 images.
 
 ## 5. Données mémorisées dans le navigateur
