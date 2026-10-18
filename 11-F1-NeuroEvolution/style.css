@@ -540,12 +540,20 @@ dialog button:disabled {
   display: none;
 }
 
-/* ---------- Bouton du décor, en haut à droite de l'écran (étape 17) ---------- */
-.decor-toggle {
+/* ---------- Menu « Performances », en haut à droite de l'écran (étape 26) ---------- */
+/* Il remplace le bouton du décor (étape 17) : le décor est une option du menu. */
+.perf-corner {
   position: fixed;
   top: 10px;
   right: 10px;
   z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.perf-toggle {
   padding: 6px 12px;
   border: 2px solid #3c3f46;
   background: #20232a;
@@ -554,11 +562,71 @@ dialog button:disabled {
   cursor: pointer;
 }
 
-.decor-toggle[aria-pressed="true"] {
+/* Affichage allégé : bordure jaune (le libellé le dit aussi en toutes lettres). */
+.perf-toggle.perf-light,
+.perf-toggle[aria-expanded="true"] {
   border-color: #ffd800;
 }
 
-.decor-toggle:focus-visible {
+.perf-menu {
+  box-sizing: border-box;
+  width: 300px;
+  max-width: calc(100vw - 20px);
+  padding: 12px;
+  border: 2px solid #3c3f46;
+  background: #20232a;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+.perf-menu[hidden] {
+  display: none;
+}
+
+.perf-menu h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.perf-hint {
+  margin: 0 0 4px;
+  font-size: 12px;
+  color: #c9ccd3;
+}
+
+.perf-presets {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+}
+
+.perf-menu button {
+  box-sizing: border-box;
+  min-height: 34px;
+  padding: 6px 8px;
+  border: 2px solid #3c3f46;
+  background: #2c3038;
+  color: #fff;
+  text-align: left;
+  cursor: pointer;
+}
+
+.perf-presets button {
+  text-align: center;
+  font-weight: bold;
+}
+
+/* Option allégée ou préréglage choisi. */
+.perf-menu button[aria-pressed="true"] {
+  border-color: #ffd800;
+  background: #3a3a22;
+}
+
+.perf-toggle:focus-visible,
+.perf-menu button:focus-visible {
   outline: 2px solid #ffd800;
 }
 
@@ -636,4 +704,27 @@ dialog button:disabled {
   background: #6b6b6b;
   border-color: #858585;
   box-shadow: none;
+}
+
+/* ---------- Décors en shader dans le menu « Performances » (étape 27) ---------- */
+.perf-menu {
+  max-height: calc(100vh - 70px);
+  overflow-y: auto;
+}
+
+.perf-menu h3 {
+  margin: 6px 0 0;
+  font-size: 14px;
+}
+
+.shader-options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Options inactives quand les shaders sont coupés ou sans WebGL. */
+.perf-menu button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }

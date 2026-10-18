@@ -9,9 +9,10 @@ const plain = (value) => JSON.parse(JSON.stringify(value));
 
 // ---------- Niveaux d'entraînement ----------
 
-test("20 niveaux ordonnés : les 5 premiers, les 5 bases de la course (étape 20), puis les 10 thèmes (étape 25)", () => {
+test("niveaux ordonnés : les 5 premiers, les 5 bases de la course (étape 20), les 10 thèmes (étape 25), puis 30 de plus (étape 29)", () => {
   const keys = ex.trainingLevelKeys();
-  assert.deepEqual(plain(keys), [
+  assert.equal(keys.length, 50);
+  assert.deepEqual(plain(keys).slice(0, 20), [
     "niveau-1-circulaire", "niveau-2-carre", "niveau-3-drift", "niveau-4-epingles", "niveau-5-coince",
     "niveau-6-drift-gauche", "niveau-7-drift-droite", "niveau-8-freinage", "niveau-9-virage-qui-se-referme", "niveau-10-haricot",
     "niveau-11-serpent", "niveau-12-coeur", "niveau-13-poisson", "niveau-14-chateau", "niveau-15-os",

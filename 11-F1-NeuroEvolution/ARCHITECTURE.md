@@ -33,6 +33,11 @@ Règle de mise à jour : chaque nouvelle demande est ajoutée à la pile sous la
 | 23 | Longueur des rayons : plage bien plus grande que 300 px, maximum = largeur de l'écran | **DONE** |
 | 24 | Bouton vert renommé « Déploiement » et agrandi ; tailles des boutons du menu harmonisées | **DONE** |
 | 25 | 10 autres niveaux d'entraînement complexes à thèmes | **DONE** |
+| 26 | Alléger pour accélérer l'entraînement : menu « Performances » (remplace le bouton du décor), circuit + voitures invisibles, optimisations intermédiaires | **DONE** |
+| 27 | Décor plus stylé : décors en shader (ambiances, herbe au vent, phares, carte de chaleur, traînée du leader), désactivables | **DONE** |
+| 28 | Voitures plus jolies | TODO |
+| 29 | 30 niveaux d'entraînement de plus (21 à 50) | **DONE** |
+| 30 | 2 circuits F1 extrêmes, d'une difficulté inhumaine (« si tu touches le volant à droite, tu meurs ») | **DONE** |
 
 ### Étape 1 – Circuit, décor, marques, rayons — **DONE**
 - Trois circuits F1 stylisés (Monza, Spa, Interlagos) lissés par Catmull-Rom ; bords sans croisement vérifiés par les tests.
@@ -163,6 +168,30 @@ Règle de mise à jour : chaque nouvelle demande est ajoutée à la pile sous la
 - Aides de tracé : `roundCorners`, `densify`, `starPoints`, `lobePoints` ; aucun changement de `circuit.js`.
 - `tests/training-themes.test.mjs` : validité (bords, canvas, rayon ≥ 9 px), complexité (≥ 1,5 tour de volant, ≥ 15 % à gauche), épingles du Serpent et du Château, angles droits du Labyrinthe, symétries, aides, départ d'une voiture.
 
+### Étape 26 – Menu « Performances » et pas de simulation allégé — **DONE**
+- `performance-settings.js` (fonctions pures testées) : options `cars` (toutes / meilleure de chaque lignée / aucune), `flames`, `panel` (10 ou 60 images), `hidden` ; préréglages complet, intermédiaire, invisible (décor compris) ; `carsToDraw`, `perfPanelEvery`, `perfFrameBudget` (15 ms en invisible) ; mémorisé.
+- Le bouton du décor (étape 17) est remplacé par le bouton « Performances » (`aria-expanded`), qui ouvre le menu ; le décor en devient une option.
+- `sketch.js` : mode invisible pendant l'entraînement (écran sombre + résumé), voitures dessinées selon `carsToDraw`, flammes détectées et dessinées seulement si affichées.
+- Simulation, mêmes résultats : `Circuit.project` sans allocation, `Circuit.wallsNear` mémorisé par fenêtre de cases, `wallsWithinReach` avant le lancer des rayons. Mesure navigateur : ×1,35 à ×1,5 pour le calcul ; jusqu'à environ ×2 avec le préréglage invisible.
+- Tests : `tests/performance-settings.test.mjs`, `tests/fast-simulation.test.mjs` (comparaison avec `projectOnSegment`, distances de rayons identiques, course identique).
+
+### Étape 27 – Décors en shader — **DONE**
+- Propositions retenues toutes ensemble : ambiances (nuit avec phares, pluie, canicule avec mirage, neige, brouillard, néon, crépuscule), herbe au vent, carte de chaleur des passages et sorties de piste, traînée du leader, ambiance « auto » par circuit (champ `ambiance` des tracés).
+- `shader-decor.js` : GLSL ES 1.0 dans des chaînes (pas de `loadShader`, chargement compatible avec les tests Node), `ShaderDecor` créé à la première utilisation dans un `p5.Graphics` WEBGL (densité 1) ; traînée en double tampon avec deux `p5.Framebuffer` ; images source réutilisées (pas de fuite de textures).
+- `shader-settings.js` (pur) : réglages mémorisés, ambiances et intensités, phares (`headlightData`), `TrailTracker`, temps du shader. `heat-map.js` (pur) : grille, sorties comptées une fois, estompage, texture logarithmique.
+- Désactivation : option `shaders` du menu Performances (coupée par les préréglages intermédiaire et invisible), repli sur le décor pré-rendu sans WebGL ou si la compilation échoue, rien en mode invisible.
+- Tests : `tests/shaders.test.mjs` (réglages, ambiances, phares, traînée, carte de chaleur avec de vraies voitures, contrat des uniforms GLSL, `ShaderDecor` avec un faux p5 : copie unique, double tampon, repli sans WebGL) ; rendu réel vérifié dans le navigateur (8 ambiances, phares, carte, traînée, préréglage intermédiaire).
+
+### Étape 29 – 30 niveaux de plus — **DONE**
+- Niveaux 21 à 50 : formes (triangle, pentagone, goutte…), nature et objets (sapin, cactus, fusée…), lettres (M, W, Z, F), puis épreuves finales sur piste de 12 m (46 à 50). Le parcours « Déploiement » compte 50 niveaux.
+- Aides `polygonPoints`, `mirrorY` ; mêmes critères que les niveaux précédents (bords, rayon ≥ 9 px, 20 px entre portions). Angles de moins de 45° évités (boucle de bord trop longue pour `removeEdgeLoops`) ; la lettre E remplacée par F (5 bandes ne tiennent pas).
+- Tests : `tests/training-more-levels.test.mjs` ; tests de comptage des étapes 20 et 25 mis à jour (50 niveaux).
+
+### Étape 30 – Circuits extrêmes — **DONE**
+- `inferno` (8 m, créneaux, > 120 angles droits) et `hachoir` (7 m, dents de scie, ≥ 18 épingles) dans `circuits-data.js`, aides `crenelPoints` et `sawPoints`.
+- Marge latérale ≤ la moitié de celle de Monza : un écart de 10 px élimine la voiture (testé), virages plus serrés que la demi-largeur, ligne médiane faisable.
+- Tests : `tests/extreme-circuits.test.mjs` ; tests F1 et vitrine mis à jour (10 circuits F1).
+
 ## 2. Modèle (Reynolds)
 
 ```text
@@ -191,10 +220,14 @@ Règles de course (scène) : sortie de piste, immobilité, tours  (Car.applyRace
 | `ray.js` | Intersection rayon / segment |
 | `sensor-settings.js` | Longueur des rayons (réglage commun, mémorisé) |
 | `circuit.js` | Géométrie : ligne médiane, bords, grille spatiale, projection, `LapTracker` |
-| `circuits-data.js` / `training-circuits-data.js` | Tracés F1 / niveaux d'entraînement |
+| `circuits-data.js` / `training-circuits-data.js` | Tracés F1 (dont 2 extrêmes) / 50 niveaux d'entraînement |
 | `track-renderer.js`, `grass.js` | Décor statique dessiné une seule fois |
 | `finish-flames.js` | Flammes sur la ligne d'arrivée : détection des tours bouclés, particules, dessin |
 | `decor.js` | Décor herbe ou léger (fond uni, densité de pixels 1), mémorisé |
+| `shader-settings.js` | Décors en shader : réglages, ambiances, phares, traînée du leader (fonctions pures) |
+| `heat-map.js` | Carte de chaleur des passages et sorties de piste (grille, estompage, texture) |
+| `shader-decor.js` | GLSL et rendu WebGL du décor (`ShaderDecor`), repli sur le décor pré-rendu |
+| `performance-settings.js` | Réglages de performance : voitures dessinées, flammes, panneau, mode invisible |
 | `brands.js` | Marques, modèles (livrée, numéro), tirage et mutation des paramètres |
 | `car-design.js` | Dessin de la voiture : simple sur le circuit, détaillé dans la vitrine |
 | `showroom.js` | Vitrine : sélection des voitures, menu « Confiance par circuit » |
@@ -221,12 +254,12 @@ Règles de course (scène) : sortie de piste, immobilité, tours  (Car.applyRace
 
 ## 4. Boucle d'une image (`sketch.js`)
 
-1. Afficher le décor pré-rendu et les obstacles.
-2. Répéter N pas de simulation selon la vitesse choisie (budget de 12 ms, `runSimulationSteps`). Un pas : pour chaque voiture en course, `sense()` (murs du circuit + côtés des obstacles) → `think()` → `applyForce()` → `update()` (une seule intégration) → règles de course (dont contact avec un obstacle).
+1. Afficher le décor (shader si activé et disponible, sinon pré-rendu) et les obstacles (en mode invisible pendant l'entraînement : fond sombre).
+2. Répéter N pas de simulation selon la vitesse choisie (budget de 12 ms, 15 ms en mode invisible, `runSimulationSteps`). Un pas : pour chaque voiture en course, `sense()` (murs du circuit + côtés des obstacles) → `think()` → `applyForce()` → `update()` (une seule intégration) → règles de course (dont contact avec un obstacle).
    À la fin de chaque pas, pour chaque lignée dont toutes les voitures sont arrêtées (sans attendre les autres) : sauvegarde du champion (et fiche du circuit), retrait si elle a bouclé le tour, sinon sa génération suivante ; parcours d'entraînement éventuel.
-   Après le déplacement des voitures : détection des tours bouclés (flammes de la ligne d'arrivée).
-3. Dessiner les voitures une seule fois (le leader avec ses rayons), puis animer et dessiner les flammes de la ligne d'arrivée.
-4. Rafraîchir le panneau et la vitesse atteinte toutes les 10 images.
+   Après le déplacement des voitures : détection des tours bouclés (flammes de la ligne d'arrivée) et carte de chaleur (si affichée).
+3. Dessiner les voitures choisies par `carsToDraw` (le leader en dernier, avec ses rayons) ou le résumé du mode invisible, puis, si elles sont affichées, les flammes de la ligne d'arrivée.
+4. Rafraîchir le panneau et la vitesse atteinte toutes les 10 images (60 en panneau ralenti).
 
 ## 5. Données mémorisées dans le navigateur
 
@@ -238,6 +271,8 @@ Règles de course (scène) : sortie de piste, immobilité, tours  (Car.applyRace
 | `f1-neuroevolution-sim-speed-v1` | Vitesse de simulation choisie |
 | `f1-neuroevolution-obstacles-v1` | Obstacles posés, par circuit |
 | `f1-neuroevolution-decor-v1` | Décor choisi : `grass` ou `light` |
+| `f1-neuroevolution-perf-v1` | Réglages de performance (`cars`, `flames`, `panel`, `hidden`, `shaders`) |
+| `f1-neuroevolution-shaders-v1` | Décors en shader (`ambiance`, `heatmap`, `trail`, `wind`) |
 | `f1-neuroevolution-obstacle-protos-v1` | Prototypes d'obstacles dessinés (`proto_N`, forme normalisée, taille en mètres) |
 
 ## 6. Tests et livraison

@@ -1,3 +1,22 @@
+// Murs qu'un rayon de longueur `reach` partant de `pos` peut toucher (étape 26) :
+// un mur dont le point le plus proche est plus loin ne change aucun résultat de
+// castAll. Marge d'1 px contre les arrondis. Le tableau d'entrée n'est pas modifié.
+function wallsWithinReach(walls, pos, reach) {
+  const limitSq = (reach + 1) * (reach + 1);
+  const result = [];
+  for (const wall of walls) {
+    const abx = wall.b.x - wall.a.x;
+    const aby = wall.b.y - wall.a.y;
+    const lenSq = abx * abx + aby * aby;
+    let t = lenSq === 0 ? 0 : ((pos.x - wall.a.x) * abx + (pos.y - wall.a.y) * aby) / lenSq;
+    t = t < 0 ? 0 : t > 1 ? 1 : t;   // = Math.min(1, Math.max(0, t)), sans appel de fonction
+    const dx = pos.x - (wall.a.x + abx * t);
+    const dy = pos.y - (wall.a.y + aby * t);
+    if (dx * dx + dy * dy <= limitSq) result.push(wall);
+  }
+  return result;
+}
+
 // Rayon capteur repris du dossier 9b : intersection demi-droite / segment.
 // Les murs sont des objets { a: {x, y}, b: {x, y} }.
 class Ray {

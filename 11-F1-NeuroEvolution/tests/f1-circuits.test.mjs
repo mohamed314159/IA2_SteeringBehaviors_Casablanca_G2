@@ -20,9 +20,9 @@ function radii(circuit) {
   });
 }
 
-test("8 circuits F1 : les 3 premiers puis 5 nouveaux, noms distincts", () => {
-  assert.deepEqual(plain(Object.keys(ex.F1_CIRCUITS)), ["monza", "spa", "interlagos", ...NEW]);
-  assert.equal(new Set(Object.values(ex.F1_CIRCUITS).map((c) => c.name)).size, 8);
+test("8 circuits F1 : les 3 premiers puis 5 nouveaux, noms distincts (+ 2 circuits extrêmes, étape 30)", () => {
+  assert.deepEqual(plain(Object.keys(ex.F1_CIRCUITS)), ["monza", "spa", "interlagos", ...NEW, "inferno", "hachoir"]);
+  assert.equal(new Set(Object.values(ex.F1_CIRCUITS).map((c) => c.name)).size, 10);
 });
 
 test("nouveaux circuits valides : bords sans croisement, dans le canvas, tour assez long, place entre portions", () => {

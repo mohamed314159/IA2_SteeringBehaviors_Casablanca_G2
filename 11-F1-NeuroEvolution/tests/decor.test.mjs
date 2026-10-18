@@ -81,16 +81,19 @@ test("drawTrackLayer : la piste (asphalte, bords, vibreurs, départ) est identiq
   assert.equal(byDefault.calls.rect.length, grass.calls.rect.length);
 });
 
-test("page : bouton du décor hors du menu, avant le canevas, libellé et état accessibles", () => {
+test("page : bouton du décor dans le menu Performances (étape 26), hors du menu principal, état accessible", () => {
   const button = html.match(/<button id="decorButton"[^>]*>([^<]*)<\/button>/);
   assert.ok(button, "bouton decorButton absent");
   assert.equal(button[1], "Décor : herbe");
   assert.match(button[0], /aria-pressed="false"/);
   const menu = html.slice(html.indexOf('<aside id="menu"'), html.indexOf("</aside>"));
-  assert.equal(menu.includes("decorButton"), false, "le bouton n'est pas dans le menu");
+  assert.equal(menu.includes("decorButton"), false, "le bouton n'est pas dans le menu principal");
+  const perfMenu = html.slice(html.indexOf('<div id="perfMenu"'), html.indexOf("</div>\n  </div>"));
+  assert.ok(perfMenu.includes('id="decorButton"'), "le décor est une option du menu Performances");
   assert.ok(html.indexOf('src="decor.js"') < html.indexOf('src="track-renderer.js"'));
   const css = fs.readFileSync(new URL("../style.css", import.meta.url), "utf8");
-  const rule = css.slice(css.indexOf(".decor-toggle {"), css.indexOf("}", css.indexOf(".decor-toggle {")));
+  assert.equal(css.includes(".decor-toggle"), false, "ancien bouton retiré");
+  const rule = css.slice(css.indexOf(".perf-corner {"), css.indexOf("}", css.indexOf(".perf-corner {")));
   assert.match(rule, /position: fixed/);
   assert.match(rule, /top: \d+px/);
   assert.match(rule, /right: \d+px/);

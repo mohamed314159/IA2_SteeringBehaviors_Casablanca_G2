@@ -4,7 +4,6 @@
 const CANVAS_WIDTH = 1200;
 const CANVAS_HEIGHT = 760;
 const TRACK_WIDTH = 44;            // px ≈ 14 m → voiture 17,6 x 6,3 px (5,6 x 2 m)
-const PANEL_EVERY = 10;            // rafraîchissement du panneau (images)
 
 let circuit;
 let trackLayer;
@@ -25,6 +24,10 @@ let ui = {};
 let showroom;                      // vitrine des voitures (showroom.js)
 let circuitShowroom;               // vitrine des circuits (circuit-showroom.js)
 let decor = DECOR_GRASS;           // décor du circuit (decor.js) : herbe ou léger
+let perf = normalizePerf(null);    // réglages de performance (performance-settings.js)
+let shaderSettings = normalizeShaderSettings(null);   // décors en shader (shader-settings.js)
+let shaderDecor;                   // rendu WebGL du décor (shader-decor.js), créé à la première utilisation
+const HIDDEN_BACKGROUND = "#15171c";   // fond du mode invisible
 let speedFactor = 1;               // accélération choisie (sim-speed.js) : 1, 2, 5… ou "max"
 let obstacles = [];                // obstacles du circuit affiché (obstacle.js)
 let obstacleWallList = [];         // leurs côtés, vus comme des murs par les rayons
@@ -49,6 +52,9 @@ function setup() {
   loadRayLength(safeLocalStorage());
   speedFactor = loadSpeedFactor(safeLocalStorage());
   decor = loadDecor(safeLocalStorage());
+  perf = loadPerf(safeLocalStorage());
+  shaderSettings = loadShaderSettings(safeLocalStorage());
+  shaderDecor = new ShaderDecor(CANVAS_WIDTH, CANVAS_HEIGHT);
   pixelDensity(decorPixelDensity(decor, displayDensity()));
   garage = new Garage(safeLocalStorage());
   removeIncompatibleLineages();
@@ -90,7 +96,7 @@ function bindMenu() {
   bindRayEditor();
   bindRayLength();
   bindSpeedButtons();
-  bindDecorButton();
+  bindPerfMenu();
   ui.raysToggle.addEventListener("click", () => {
     showRays = !showRays;
     ui.raysToggle.setAttribute("aria-pressed", String(showRays));
@@ -108,24 +114,103 @@ function deployButtonHtml(levelCount) {
   return `Déploiement<small>parcours de ${levelCount} niveaux d'entraînement</small>`;
 }
 
-// Bouton en haut à droite de l'écran : herbe texturée ↔ décor léger (fond uni,
-// densité de pixels 1). Seul le décor est redessiné : l'entraînement continue.
-function bindDecorButton() {
+// Bouton « Performances » en haut à droite de l'écran (étape 26, remplace le
+// bouton du décor) : il ouvre un petit menu de préréglages et d'options
+// d'affichage. Rien ne relance l'entraînement : seul le dessin change.
+function bindPerfMenu() {
+  ui.perfButton = document.getElementById("perfButton");
+  ui.perfMenu = document.getElementById("perfMenu");
   ui.decorButton = document.getElementById("decorButton");
-  showDecorButton();
-  ui.decorButton.addEventListener("click", () => {
-    decor = toggledDecor(decor);
-    saveDecor(safeLocalStorage(), decor);
-    pixelDensity(decorPixelDensity(decor, displayDensity()));
-    buildTrackLayer();
-    showDecorButton();
-    notify(decor === DECOR_LIGHT ? "Décor léger : fond uni, densité de pixels 1." : "Décor : herbe.");
+  ui.perfPresets = [...ui.perfMenu.querySelectorAll("[data-preset]")];
+  ui.perfOptions = [...ui.perfMenu.querySelectorAll("[data-perf-option]")];
+  ui.shaderOptions = [...ui.perfMenu.querySelectorAll("[data-shader-option]")];
+  ui.shaderStatus = document.getElementById("shaderStatus");
+  ui.perfButton.addEventListener("click", () => setPerfMenuOpen(ui.perfMenu.hidden));
+  ui.decorButton.addEventListener("click", () => applyDecor(toggledDecor(decor)));
+  for (const button of ui.perfPresets) {
+    button.addEventListener("click", () => {
+      const preset = PERF_PRESETS[button.dataset.preset];
+      applyPerf(preset.perf);
+      if (preset.decor !== decor) applyDecor(preset.decor);
+      notify(`Performances : préréglage ${PERF_PRESET_LABELS[button.dataset.preset]}.`);
+    });
+  }
+  for (const button of ui.perfOptions) {
+    button.addEventListener("click", () => applyPerf(toggledPerf(perf, button.dataset.perfOption)));
+  }
+  for (const button of ui.shaderOptions) {
+    button.addEventListener("click", () => applyShaderSettings(toggledShaderSetting(shaderSettings, button.dataset.shaderOption)));
+  }
+  // Échap ou clic en dehors : le menu se referme.
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !ui.perfMenu.hidden) {
+      setPerfMenuOpen(false);
+      ui.perfButton.focus();
+    }
   });
+  document.addEventListener("click", (event) => {
+    if (!ui.perfMenu.hidden && !event.target.closest(".perf-corner")) setPerfMenuOpen(false);
+  });
+  showPerf();
 }
 
-function showDecorButton() {
+function setPerfMenuOpen(open) {
+  ui.perfMenu.hidden = !open;
+  ui.perfButton.setAttribute("aria-expanded", String(open));
+}
+
+function applyPerf(next) {
+  perf = normalizePerf(next);
+  savePerf(safeLocalStorage(), perf);
+  showPerf();
+  updatePanel();
+}
+
+// Réglages des décors en shader (étape 27) : seul le dessin change.
+function applyShaderSettings(next) {
+  shaderSettings = normalizeShaderSettings(next);
+  saveShaderSettings(safeLocalStorage(), shaderSettings);
+  showPerf();
+}
+
+// Herbe texturée ↔ décor léger (fond uni, densité de pixels 1). Seul le décor
+// est redessiné : l'entraînement continue.
+function applyDecor(next) {
+  decor = normalizeDecor(next);
+  saveDecor(safeLocalStorage(), decor);
+  pixelDensity(decorPixelDensity(decor, displayDensity()));
+  buildTrackLayer();
+  showPerf();
+}
+
+// Libellés et états (aria-pressed = option allégée) du bouton et du menu.
+function showPerf() {
+  const preset = perfPresetName(perf, decor);
+  ui.perfButton.textContent = perfButtonLabel(perf, decor);
+  ui.perfButton.classList.toggle("perf-light", preset !== "complet");
   ui.decorButton.textContent = decorButtonLabel(decor);
   ui.decorButton.setAttribute("aria-pressed", String(decor === DECOR_LIGHT));
+  for (const button of ui.perfPresets) button.setAttribute("aria-pressed", String(button.dataset.preset === preset));
+  const lighter = { cars: perf.cars !== "all", flames: !perf.flames, panel: perf.panel === "slow", hidden: perf.hidden, shaders: !perf.shaders };
+  for (const button of ui.perfOptions) {
+    button.textContent = perfOptionLabel(perf, button.dataset.perfOption);
+    button.setAttribute("aria-pressed", String(lighter[button.dataset.perfOption]));
+  }
+  showShaderOptions();
+}
+
+// Options des shaders : actives seulement si l'interrupteur général est sur
+// « activés » et que WebGL fonctionne (aria-pressed = effet affiché).
+function showShaderOptions() {
+  const unavailable = shaderDecor && shaderDecor.available === false;
+  for (const button of ui.shaderOptions) {
+    const option = button.dataset.shaderOption;
+    button.textContent = shaderOptionLabel(shaderSettings, option, circuit ? circuitLayout(circuitKey) : null);
+    button.disabled = !perf.shaders || unavailable;
+    if (option !== "ambiance") button.setAttribute("aria-pressed", String(shaderSettings[option]));
+  }
+  ui.shaderStatus.hidden = !unavailable;
+  if (unavailable) ui.shaderStatus.textContent = "WebGL indisponible sur ce navigateur : décor classique affiché.";
 }
 
 // Décor pré-rendu du circuit actuel (une seule fois, pas à chaque image).
@@ -134,6 +219,7 @@ function buildTrackLayer() {
   trackLayer = createGraphics(CANVAS_WIDTH, CANVAS_HEIGHT);
   trackLayer.pixelDensity(decorPixelDensity(decor, displayDensity()));
   drawTrackLayer(trackLayer, circuit, createRng(42), decor);
+  shaderDecor.setTrack(trackLayer, circuit);   // recopié dans la texture du shader au prochain dessin
 }
 
 // Longueur des rayons : curseur (réagit pendant le glissement), boutons − / +
@@ -268,7 +354,15 @@ function onStorageChange(event) {
     obstacles = loadObstacles(safeLocalStorage(), circuitKey);
     refreshObstacles(false);
   }
-  if (event.key === DECOR_STORAGE_KEY && loadDecor(safeLocalStorage()) !== decor) ui.decorButton.click();
+  if (event.key === DECOR_STORAGE_KEY && loadDecor(safeLocalStorage()) !== decor) applyDecor(loadDecor(safeLocalStorage()));
+  if (event.key === PERF_STORAGE_KEY) {
+    perf = loadPerf(safeLocalStorage());
+    showPerf();
+  }
+  if (event.key === SHADER_STORAGE_KEY) {
+    shaderSettings = loadShaderSettings(safeLocalStorage());
+    showPerf();
+  }
   if (event.key === SIM_SPEED_STORAGE_KEY) {
     speedFactor = loadSpeedFactor(safeLocalStorage());
     showSpeedFactor();
@@ -376,6 +470,8 @@ function buildCircuit(key) {
     pixelsPerMeter: TRACK_WIDTH / F1_TRACK_WIDTH_M
   });
   buildTrackLayer();
+  shaderDecor.clearHistory();       // carte de chaleur et traînée propres à ce circuit
+  if (ui.shaderOptions) showShaderOptions();   // « Ambiance : auto (…) » suit le circuit
   finishFlames.clear();
   placing = null;
   removingObstacle = false;
@@ -484,20 +580,67 @@ function finishCurriculum() {
 // Une image : plusieurs pas de simulation selon la vitesse choisie, puis un
 // seul dessin (sim-speed.js).
 function draw() {
-  image(trackLayer, 0, 0);
-  for (const obstacle of obstacles) obstacle.show();
+  // Mode invisible (étape 26) : pendant l'entraînement, ni circuit ni voitures.
+  const hideScene = perf.hidden && (training || demo);
+  if (hideScene) {
+    background(HIDDEN_BACKGROUND);
+  } else {
+    drawDecor((training || demo) ? carsToDraw(cars, perf) : []);
+    for (const obstacle of obstacles) obstacle.show();
+  }
   if (training || demo) {
-    speedMeter.add(runSimulationSteps(simulationStep, speedFactor));
+    speedMeter.add(runSimulationSteps(simulationStep, speedFactor, () => performance.now(), perfFrameBudget(perf)));
     renderGarageIfChanged();
   }
-  if (demo) drawDemoCars();
+  if (hideScene) drawHiddenSummary();
+  else if (demo) drawDemoCars();
   else if (training) drawTrainingCars();
   else if (!placing && !removingObstacle) drawIdleMessage();
-  finishFlames.update();
-  finishFlames.show();
+  if (perf.flames && !hideScene) {
+    finishFlames.update();
+    finishFlames.show();
+  }
   drawPlacementPreview();
   drawCanvasNotice();
-  if (frameCount % PANEL_EVERY === 0) updatePanel();
+  if (frameCount % perfPanelEvery(perf) === 0) updatePanel();
+}
+
+// Décor de l'image : rendu shader (ambiance, vent, phares, carte de chaleur,
+// traînée) ou, si les shaders sont coupés ou sans WebGL, le décor pré-rendu.
+// visibleCars : voitures dessinées, la meilleure en dernier (phares, traînée).
+function drawDecor(visibleCars) {
+  const wanted = perf.shaders && shaderDecor.available !== false;
+  const output = wanted ? shaderDecor.render({
+    frame: frameCount,
+    ambiance: effectiveAmbiance(shaderSettings, circuitLayout(circuitKey)),
+    settings: shaderSettings,
+    cars: visibleCars,
+    leader: visibleCars[visibleCars.length - 1]
+  }) : null;
+  if (wanted && !output) showPerf();   // WebGL indisponible (une seule fois) : le menu le signale
+  image(output || trackLayer, 0, 0, width, height);
+}
+
+// Carte de chaleur enregistrée à chaque pas quand elle est affichée.
+function heatMapRecording() {
+  return shaderSettings.heatmap && shadersActive(perf, shaderDecor.available !== false, perf.hidden && (training || demo));
+}
+
+// Écran du mode invisible : un résumé texte, mis à jour à chaque image.
+function drawHiddenSummary() {
+  push();
+  fill(255);
+  noStroke();
+  textAlign(CENTER, CENTER);
+  textSize(22);
+  text("Mode invisible : circuit et voitures masqués", width / 2, height / 2 - 40);
+  textSize(16);
+  fill(200);
+  const racing = cars.filter((c) => c.racing).length;
+  const speed = effectiveSpeedText() || "vitesse ×1";
+  text(`${generationsPlayed} génération(s) terminée(s) · en piste ${racing}/${cars.length} · ${speed}`, width / 2, height / 2);
+  text("Bouton « Performances » en haut à droite pour réafficher.", width / 2, height / 2 + 32);
+  pop();
 }
 
 // Un pas de simulation (identique quelle que soit la vitesse) : chaque voiture
@@ -506,20 +649,25 @@ function draw() {
 function simulationStep() {
   if (demo) {
     for (const car of cars) car.drive(obstacleWallList, obstacles);
-    finishFlames.detect(cars, circuit);
+    if (perf.flames && !perf.hidden) finishFlames.detect(cars, circuit);
+    if (heatMapRecording()) shaderDecor.heat.record(cars);
     if (cars.every((car) => !car.racing)) restartDemo();
     return true;
   }
   if (!training) return false;
   for (const car of cars) car.drive(obstacleWallList, obstacles);
-  finishFlames.detect(cars, circuit);   // avant le remplacement des lignées terminées
+  if (perf.flames && !perf.hidden) finishFlames.detect(cars, circuit);   // avant le remplacement des lignées terminées
+  if (heatMapRecording()) shaderDecor.heat.record(cars);                 // idem : les sorties de piste sont encore là
   advanceLineages();
   return training || demo;
 }
 
+// Voitures dessinées selon les réglages de performance (toutes, la meilleure
+// de chaque lignée, aucune) ; la meilleure est dessinée en dernier, avec ses rayons.
 function drawTrainingCars() {
-  const ranking = [...cars].sort(compareCars);
-  for (const car of ranking.slice().reverse()) car.show(showRays && car === ranking[0]);
+  const list = carsToDraw(cars, perf);
+  const leader = list[list.length - 1];
+  for (const car of list) car.show(showRays && car === leader);
 }
 
 // Générations indépendantes : une lignée dont toutes les voitures sont
@@ -571,6 +719,7 @@ function restartDemo() {
 }
 
 function drawDemoCars() {
+  if (perf.cars === "none") return;
   for (const car of cars) {
     car.show(false);
     car.showCaption(`Gén. ${car.generation} – ${DEMO_CAPTION}`);

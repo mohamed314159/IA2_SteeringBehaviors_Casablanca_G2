@@ -220,6 +220,7 @@ class Circuit {
   buildWallGrid(cellSize) {
     this.cellSize = cellSize;
     this.wallGrid = new Map();
+    this.nearCache = new Map();   // fenêtre de cases → murs (wallsNear, étape 26)
     // Cases occupées (bornes) : un très long rayon ne parcourt pas des cases vides.
     this.gridBounds = { x0: Infinity, x1: -Infinity, y0: Infinity, y1: -Infinity };
     for (const wall of this.walls) {
@@ -242,8 +243,9 @@ class Circuit {
   }
 
   // Murs dont la cellule est à moins de `radius` de la position (sans doublon).
+  // Le résultat d'une même fenêtre de cases est mémorisé (étape 26) : les
+  // voitures voisines partagent la même liste, à ne pas modifier.
   wallsNear(pos, radius) {
-    const found = new Set();
     const b = this.gridBounds;
     const x0 = Math.max(b.x0, Math.floor((pos.x - radius) / this.cellSize));
     const x1 = Math.min(b.x1, Math.floor((pos.x + radius) / this.cellSize));
@@ -251,32 +253,58 @@ class Circuit {
     const y1 = Math.min(b.y1, Math.floor((pos.y + radius) / this.cellSize));
     // Rayon couvrant toute la grille : tous les murs, sans parcourir les cases.
     if (x0 === b.x0 && x1 === b.x1 && y0 === b.y0 && y1 === b.y1) return this.walls;
+    const key = x0 + "," + x1 + "," + y0 + "," + y1;
+    const cached = this.nearCache.get(key);
+    if (cached) return cached;
+    const found = new Set();
     for (let cx = x0; cx <= x1; cx++) {
       for (let cy = y0; cy <= y1; cy++) {
         const list = this.wallGrid.get(cx + "," + cy);
         if (list) for (const wall of list) found.add(wall);
       }
     }
-    return [...found];
+    const walls = [...found];
+    this.nearCache.set(key, walls);
+    return walls;
   }
 
   // Projection sur la ligne médiane. Avec hintIndex, recherche locale (±window
   // segments) pour ne pas sauter vers une portion voisine du tracé.
+  // Calcul en ligne (étape 26) : même résultat que projectOnSegment sur chaque
+  // segment, sans créer d'objet par segment visité (appelé à chaque pas par voiture).
   project(pos, hintIndex = null, window = 25) {
     const n = this.center.length;
-    let best = { index: 0, t: 0, distance: Infinity };
-    const visit = (i) => {
-      const r = projectOnSegment(pos, this.center[i], this.center[(i + 1) % n]);
-      if (r.distance < best.distance) best = { index: i, t: r.t, distance: r.distance };
-    };
-    if (hintIndex === null) {
-      for (let i = 0; i < n; i++) visit(i);
-    } else {
-      for (let k = -window; k <= window; k++) visit(((hintIndex + k) % n + n) % n);
+    const first = hintIndex === null ? 0 : hintIndex - window;
+    const count = hintIndex === null ? n : 2 * window + 1;
+    let bestIndex = 0;
+    let bestT = 0;
+    let bestSq = Infinity;       // distance au carré : tri rapide des segments
+    let bestDistance = Infinity; // distance exacte (Math.hypot) du meilleur segment
+    for (let k = 0; k < count; k++) {
+      const i = (((first + k) % n) + n) % n;
+      const a = this.center[i];
+      const b = this.center[(i + 1) % n];
+      const abx = b.x - a.x;
+      const aby = b.y - a.y;
+      const lenSq = abx * abx + aby * aby;
+      let t = lenSq === 0 ? 0 : ((pos.x - a.x) * abx + (pos.y - a.y) * aby) / lenSq;
+      t = t < 0 ? 0 : t > 1 ? 1 : t;   // = Math.min(1, Math.max(0, t))
+      const dx = pos.x - (a.x + abx * t);
+      const dy = pos.y - (a.y + aby * t);
+      const sq = dx * dx + dy * dy;
+      // Segment nettement plus loin : écarté sans racine. Sinon (meilleur ou
+      // quasi-égalité), départage exact par Math.hypot, comme projectOnSegment.
+      if (sq > bestSq * (1 + 1e-9)) continue;
+      const distance = Math.hypot(dx, dy);
+      if (distance < bestDistance) {
+        bestIndex = i;
+        bestT = t;
+        bestDistance = distance;
+        bestSq = sq;
+      }
     }
-    const segLen = this.arc[best.index + 1] - this.arc[best.index];
-    best.s = this.arc[best.index] + best.t * segLen;
-    return best;
+    const segLen = this.arc[bestIndex + 1] - this.arc[bestIndex];
+    return { index: bestIndex, t: bestT, distance: bestDistance, s: this.arc[bestIndex] + bestT * segLen };
   }
 
   // Pose de départ : position sur la ligne médiane et cap dans le sens de course.

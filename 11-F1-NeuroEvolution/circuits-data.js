@@ -4,6 +4,30 @@
 // Ce ne sont pas des relevés GPS : les proportions générales et les virages
 // emblématiques sont conservés, la longueur est compressée pour tenir à l'écran.
 // Le sens de course est celui de l'ordre des points (stylisé, pas toujours le sens réel).
+// `ambiance` : décor en shader en mode « auto » (shader-settings.js), « jour » par défaut.
+// Créneaux (étape 30) : ligne de x0 à x1 à la hauteur y, qui descend de `depth`
+// un segment sur deux (segments de `width`). Chaque changement de niveau est un angle droit.
+function crenelPoints(x0, x1, y, depth, width) {
+  const dir = Math.sign(x1 - x0);
+  const count = Math.round(Math.abs(x1 - x0) / width);
+  const points = [];
+  for (let i = 0; i < count; i++) {
+    const level = i % 2 === 0 ? y : y + depth;
+    points.push([x0 + dir * i * width, level], [x0 + dir * (i + 1) * width, level]);
+  }
+  return points;
+}
+
+// Dents de scie (étape 30) : de x0 à x1, alternance entre la base (yBase) et la
+// pointe (yTip) tous les `step` ; chaque pointe et chaque creux est une épingle.
+function sawPoints(x0, x1, yBase, yTip, step) {
+  const dir = Math.sign(x1 - x0);
+  const count = Math.round(Math.abs(x1 - x0) / step);
+  const points = [];
+  for (let i = 0; i <= count; i++) points.push([x0 + dir * i * step, i % 2 === 0 ? yBase : yTip]);
+  return points;
+}
+
 const F1_CIRCUITS = {
   monza: {
     name: "Monza (Italie)",
@@ -21,6 +45,7 @@ const F1_CIRCUITS = {
   },
   spa: {
     name: "Spa-Francorchamps (Belgique)",
+    ambiance: "pluie",
     points: [
       [84, 20], [88, 10], [83, 5], [77, 9],   // ligne droite puis La Source
       [71, 17], [65, 19], [61, 25],           // Eau Rouge / Raidillon
@@ -35,6 +60,7 @@ const F1_CIRCUITS = {
   },
   interlagos: {
     name: "Interlagos (Brésil)",
+    ambiance: "pluie",
     points: [
       [72, 8], [55, 7], [40, 8],              // ligne droite des stands
       [32, 11], [30, 17], [24, 21],           // S do Senna
@@ -52,6 +78,7 @@ const F1_CIRCUITS = {
   // intérieur replié est coupé par Circuit (removeEdgeLoops).
   silverstone: {
     name: "Silverstone (Royaume-Uni)",
+    ambiance: "brouillard",
     points: [
       [58, 53], [44, 54],                       // Hamilton Straight
       [34, 52], [28, 55], [22, 52],             // Abbey, Farm, Village
@@ -68,6 +95,7 @@ const F1_CIRCUITS = {
   },
   monaco: {
     name: "Monaco",
+    ambiance: "crepuscule",
     points: [
       [30, 40], [40, 38],                       // Boulevard Albert Ier
       [46, 36], [50, 30],                       // Sainte-Dévote, Beau Rivage
@@ -99,6 +127,7 @@ const F1_CIRCUITS = {
   },
   redBullRing: {
     name: "Red Bull Ring (Autriche)",
+    ambiance: "neige",
     points: [
       [16, 52], [40, 53], [62, 52],             // ligne des stands
       [72, 48], [76, 40],                       // virage 1 (Niki Lauda)
@@ -113,6 +142,7 @@ const F1_CIRCUITS = {
   },
   hungaroring: {
     name: "Hungaroring (Hongrie)",
+    ambiance: "canicule",
     points: [
       [20, 8], [50, 8],                         // ligne des stands
       [56, 8], [58, 12], [54, 16],              // virage 1 (épingle)
@@ -124,6 +154,35 @@ const F1_CIRCUITS = {
       [40, 52], [30, 56], [18, 54],             // virages 11-12
       [10, 46], [8, 34],                        // virages 13-14
       [12, 16]
+    ]
+  },
+  // Étape 30 : deux circuits extrêmes, d'une difficulté inhumaine. Piste très
+  // étroite (8 m puis 7 m, la voiture en fait 2) : moins de 10 px de marge de
+  // chaque côté, le moindre coup de volant de trop fait sortir la voiture.
+  inferno: {
+    name: "Inferno (circuit extrême)",
+    skill: "inhumain : piste de 8 m, cinq rangées de créneaux, plus de 120 angles droits",
+    trackWidthMeters: 8,
+    ambiance: "nuit",
+    points: [
+      ...crenelPoints(14, 92, 5, 3, 6), [97, 10],
+      ...crenelPoints(92, 14, 15, 3, 6), [9, 20],
+      ...crenelPoints(14, 92, 25, 3, 6), [97, 30],
+      ...crenelPoints(92, 14, 35, 3, 6), [9, 40],
+      ...crenelPoints(14, 92, 45, 3, 6), [97, 50],
+      [92, 56], [60, 57], [30, 57], [10, 57],
+      [3, 50], [3, 30], [3, 10], [8, 4]
+    ]
+  },
+  hachoir: {
+    name: "Le Hachoir (circuit extrême)",
+    skill: "inhumain : piste de 7 m, deux lames de dents de scie, une vingtaine d'épingles aiguës",
+    trackWidthMeters: 7,
+    ambiance: "neon",
+    points: [
+      ...sawPoints(4, 84, 3, 26, 8), [96, 12],
+      [96, 48], ...sawPoints(84, 4, 57, 34, 8),
+      [-4, 48], [-4, 12]
     ]
   }
 };

@@ -35,6 +35,10 @@
   <script src="ray-editor.js"></script>
   <script src="car.js"></script>
   <script src="evolution.js"></script>
+  <script src="performance-settings.js"></script>
+  <script src="shader-settings.js"></script>
+  <script src="heat-map.js"></script>
+  <script src="shader-decor.js"></script>
   <script src="garage.js"></script>
   <script src="showroom.js"></script>
   <script src="model-file.js"></script>
@@ -43,8 +47,37 @@
 </head>
 
 <body>
-  <button id="decorButton" type="button" class="decor-toggle" aria-pressed="false"
-    title="Retire l'herbe texturée et réduit la densité de pixels : rendu plus léger">Décor : herbe</button>
+  <div class="perf-corner">
+    <button id="perfButton" type="button" class="perf-toggle" aria-expanded="false" aria-controls="perfMenu"
+      title="Alléger l'affichage pour accélérer l'entraînement">Performances : complet</button>
+    <div id="perfMenu" class="perf-menu" role="group" aria-labelledby="perfTitle" hidden>
+      <h2 id="perfTitle">Performances</h2>
+      <p class="perf-hint">Moins de dessin = plus de calcul par seconde. L'entraînement donne les mêmes résultats.</p>
+      <div class="perf-presets" role="group" aria-label="Préréglages">
+        <button type="button" data-preset="complet" aria-pressed="true">Complet</button>
+        <button type="button" data-preset="intermediaire" aria-pressed="false">Intermédiaire</button>
+        <button type="button" data-preset="invisible" aria-pressed="false">Invisible</button>
+      </div>
+      <button id="decorButton" type="button" aria-pressed="false"
+        title="Retire l'herbe texturée et réduit la densité de pixels : rendu plus léger">Décor : herbe</button>
+      <button type="button" data-perf-option="cars" aria-pressed="false">Voitures dessinées : toutes</button>
+      <button type="button" data-perf-option="flames" aria-pressed="false">Flammes d'arrivée : affichées</button>
+      <button type="button" data-perf-option="panel" aria-pressed="false">Panneau des lignées : 6 fois par seconde</button>
+      <button type="button" data-perf-option="hidden" aria-pressed="false">Circuit + voitures : visibles</button>
+      <h3 id="shaderTitle">Décors en shader</h3>
+      <button type="button" data-perf-option="shaders" aria-pressed="false"
+        title="Interrupteur général des effets WebGL (coupés par les préréglages intermédiaire et invisible)">Effets shader : activés</button>
+      <div class="shader-options" role="group" aria-labelledby="shaderTitle">
+        <button type="button" data-shader-option="ambiance"
+          title="Change l'ambiance ; « auto » prend celle du circuit">Ambiance : auto (jour)</button>
+        <button type="button" data-shader-option="heatmap" aria-pressed="false"
+          title="Passages des voitures en bleu, sorties de piste en rouge">Carte de chaleur : masquée</button>
+        <button type="button" data-shader-option="trail" aria-pressed="true">Traînée du leader : affichée</button>
+        <button type="button" data-shader-option="wind" aria-pressed="true">Herbe au vent : animée</button>
+      </div>
+      <p id="shaderStatus" class="perf-hint" hidden></p>
+    </div>
+  </div>
   <main id="layout">
     <aside id="menu" aria-label="Menu">
       <h1>F1 Neuroévolution</h1>

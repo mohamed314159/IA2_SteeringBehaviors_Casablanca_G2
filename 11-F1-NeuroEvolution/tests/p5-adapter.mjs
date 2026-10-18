@@ -28,7 +28,7 @@ export const SCRIPTS = [
   "random.js", "vehicle.js", "ray.js", "sensor-settings.js", "sim-speed.js", "circuits-data.js", "training-circuits-data.js", "circuit.js",
   "track-renderer.js", "finish-flames.js", "circuit-showroom.js", "brands.js", "network-config.js", "neural-network.js", "architecture.js", "grass.js", "decor.js", "confidence.js", "car-design.js", "obstacle.js",
   "obstacle-catalog.js", "obstacle-placement.js", "obstacle-showroom.js", "car.js",
-  "evolution.js", "garage.js", "curriculum.js", "showroom.js", "model-file.js", "ray-editor.js", "network-viewer.js"
+  "evolution.js", "performance-settings.js", "shader-settings.js", "heat-map.js", "shader-decor.js", "garage.js", "curriculum.js", "showroom.js", "model-file.js", "ray-editor.js", "network-viewer.js"
 ];
 
 // Stockage factice de type localStorage.
@@ -95,12 +95,21 @@ export function loadExample(files = SCRIPTS, globals = {}) {
     allCircuitEntries, circuitLayout, thumbnailScale, circuitCardInfo, drawTrackThumbnail,
     CIRCUIT_THUMB_WIDTH, CIRCUIT_THUMB_HEIGHT, CONFIDENCE_START, CONFIDENCE_MIN, CONFIDENCE_MAX,
 
-    TRAINING_CIRCUITS, TRAINING_AREA_RATIO, trainingLevelKeys, Curriculum, arcPoints, spiralPoints, mirrorX, roundCorners, densify, lobePoints, starPoints,
+    TRAINING_CIRCUITS, TRAINING_AREA_RATIO, trainingLevelKeys, Curriculum, arcPoints, spiralPoints, mirrorX, roundCorners, densify, lobePoints, starPoints, polygonPoints, mirrorY, M_POINTS, crenelPoints, sawPoints,
     DEFAULT_RAY_LENGTH, MIN_RAY_LENGTH, MAX_RAY_LENGTH, RAY_LENGTH_STORAGE_KEY,
     currentRayLength, setRayLength, loadRayLength, saveRayLength, currentMaxRayLength, setMaxRayLength,
     ARCHITECTURE_STORAGE_KEY, MAX_HIDDEN_LAYERS, currentNetworkConfig, architectureOf,
     sameArchitecture, validateArchitecture, loadArchitecture, useStoredArchitecture,
     applyArchitecture, resetArchitecture,
+    wallsWithinReach, PERF_STORAGE_KEY, CAR_DISPLAY_MODES, DEFAULT_PERF, PERF_PRESETS, PERF_PRESET_LABELS, PANEL_EVERY_NORMAL, PANEL_EVERY_SLOW,
+    HIDDEN_FRAME_BUDGET_MS, normalizePerf, perfPresetName, perfButtonLabel, toggledPerf, perfOptionLabel, carsToDraw,
+    perfPanelEvery, perfFrameBudget, loadPerf, savePerf,
+    SHADER_STORAGE_KEY, AMBIANCES, AMBIANCE_CHOICES, AMBIANCE_LABELS, DEFAULT_SHADER_SETTINGS, AMBIANCE_EFFECTS, AMBIANCE_PARAMS,
+    MAX_HEADLIGHTS, TRAIL_MAX_JUMP, SHADER_TIME_PERIOD, normalizeShaderSettings, toggledShaderSetting, circuitAmbiance,
+    effectiveAmbiance, ambianceParams, shaderOptionLabel, shadersActive, loadShaderSettings, saveShaderSettings, shaderTime,
+    headlightData, TrailTracker, HeatMap, HEAT_CELL, HEAT_VISIT, HEAT_CRASH, HEAT_DECAY,
+    SHADER_VERT, BACKGROUND_FRAG, TRAIL_FRAG, declaredUniforms, backgroundUniforms, trailUniforms, drawTrackMask, ShaderDecor,
+    TRAIL_FADE, HEAT_UPLOAD_EVERY, TRAIL_GLOW_PER_PX, TRAIL_GLOW_MIN, TRAIL_GLOW_MAX, trailIntensity, TRAIL_MIN_STEP,
     Garage, GARAGE_STORAGE_KEY, GARAGE_HISTORY_LIMIT, networkLayout, networkLabels
   })`, context);
 }

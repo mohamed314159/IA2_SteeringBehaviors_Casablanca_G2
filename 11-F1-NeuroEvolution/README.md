@@ -32,6 +32,12 @@ Le détail de chaque étape et l'architecture du projet sont dans [ARCHITECTURE.
 | 22 | Designs de voitures plus faciles à distinguer (deux voitures rouges de marques différentes se ressemblent trop) | ✅ |
 | 23 | Longueur des rayons : plage bien plus grande que 300 px, maximum = largeur de l'écran | ✅ |
 | 24 | Bouton vert renommé « Déploiement » et agrandi ; tailles des boutons du menu harmonisées | ✅ |
+| 25 | 10 autres niveaux d'entraînement complexes à thèmes | ✅ |
+| 26 | Menu « Performances » (remplace le bouton du décor) : circuit + voitures invisibles et allègements intermédiaires ; pas de simulation plus rapide | ✅ |
+| 27 | Décor plus stylé : décors en shader (ambiances, herbe au vent, phares, carte de chaleur, traînée), désactivables | ✅ |
+| 28 | Voitures plus jolies | à faire |
+| 29 | 30 niveaux d'entraînement de plus (21 à 50) | ✅ |
+| 30 | 2 circuits F1 extrêmes, d'une difficulté inhumaine (Inferno, Le Hachoir) | ✅ |
 
 ## Lancement
 
@@ -50,13 +56,13 @@ De haut en bas :
 1. **Lignées en piste** : un résumé (générations terminées, voitures en piste, vitesse atteinte, niveau du parcours, dernier message) puis une fiche par lignée. Au repos, les voitures du garage avec leur pourcentage sur le circuit actuel.
 2. **Circuit : …** (ouvre la vitrine des circuits) et **Voitures : …** (ouvre la vitrine des voitures). Le nom du circuit et le nombre de voitures sélectionnées sont écrits dans les boutons.
 3. **Réseau de neurones : 6 → 20 → 2** (ouvre `network.html`) et **Rayons : 5 · longueur 160 px** (ouvre l'éditeur de rayons).
-4. **Entraîner sur ce circuit**, **Arrêter**, puis le grand bouton vert **Déploiement** (parcours des 20 niveaux d'entraînement ; le nombre, calculé d'après les niveaux existants, est écrit en petit dessous). C'est le bouton le plus important : texte en 21 px, 64 px de haut, avec une ombre ; il reste grisé tant qu'aucune voiture n'est sélectionnée.
+4. **Entraîner sur ce circuit**, **Arrêter**, puis le grand bouton vert **Déploiement** (parcours des 50 niveaux d'entraînement ; le nombre, calculé d'après les niveaux existants, est écrit en petit dessous). C'est le bouton le plus important : texte en 21 px, 64 px de haut, avec une ombre ; il reste grisé tant qu'aucune voiture n'est sélectionnée.
 
 Tous les autres boutons du menu ont la même hauteur (42 px, de quoi tenir un libellé sur deux lignes), avec leur texte centré ; les vitesses forment une grille de 4 colonnes.
 5. Vitesse de simulation **×1 … ×100, max**, **Rayons du leader : affichés / masqués**.
 6. **Vitrine des obstacles**, **Obstacles au hasard**, **Retirer un obstacle**, **Retirer tous**.
 
-En haut à droite de l'écran, hors du menu : **Décor : herbe / Décor : léger** (voir « Décor léger »).
+En haut à droite de l'écran, hors du menu : **Performances : …** ouvre le menu des performances (voir « Performances »), dont le choix du décor.
 
 Pas d'autre texte dans le menu : les consignes (placer ou retirer un obstacle) et les messages courts s'affichent dans un bandeau en haut du circuit. Après une mise à jour des fichiers, recharger avec Ctrl+F5.
 
@@ -153,9 +159,71 @@ Boutons « obstacles » du menu :
 - Les obstacles sont **mémorisés par circuit** dans le navigateur ; leur nombre s'affiche dans la vitrine des circuits.
 - `Obstacle` étend `Vehicle` (entité immobile, sans locomotion), conformément aux consignes du dépôt.
 
+## Performances (`performance-settings.js`, étape 26)
+
+Le bouton **Performances : complet / intermédiaire / invisible / personnalisé**, en haut à droite de l'écran, ouvre un petit menu (Échap ou clic en dehors pour le fermer). Moins la page dessine, plus il reste de temps pour la simulation : en vitesse « max », plus de pas par seconde. Un pas de simulation reste identique : seul l'affichage change.
+
+| Préréglage | Décor | Voitures dessinées | Flammes | Panneau des lignées | Circuit + voitures |
+|---|---|---|---|---|---|
+| Complet | herbe | toutes | oui | 6 fois par seconde | visibles |
+| Intermédiaire | léger | la meilleure de chaque lignée | non | 1 fois par seconde | visibles |
+| Invisible | léger | aucune | non | 1 fois par seconde | invisibles |
+
+Chaque option se règle aussi seule ; le libellé écrit l'état en toutes lettres. En mode **invisible**, pendant l'entraînement, le canevas devient un écran sombre avec le nombre de générations, les voitures en piste et la vitesse atteinte. Le budget de calcul par image passe de 12 à 15 ms (`HIDDEN_FRAME_BUDGET_MS`), puisqu'il n'y a presque rien à dessiner. Les flammes coupées ne sont plus détectées non plus. Réglages mémorisés : `f1-neuroevolution-perf-v1`.
+
+Le pas de simulation a aussi été allégé, avec exactement les mêmes résultats (vérifié par des tests et par une empreinte de 3 000 pas sur trois circuits) :
+- `Circuit.project` (suivi du tour, à chaque pas pour chaque voiture) : calcul en ligne sans objet par segment, comparaison des distances au carré, et `Math.hypot` seulement en cas d'égalité possible ;
+- `Circuit.wallsNear` : la liste des murs d'une même fenêtre de cases est mémorisée et partagée (à ne pas modifier) ;
+- `wallsWithinReach` (`ray.js`) : les murs plus loin que la longueur des rayons sont écartés une fois, pour tous les rayons de la voiture.
+
+Mesures dans le navigateur (Monza, 4 modèles, 60 voitures, vitesse « max », même graine, à refaire sur une autre machine) :
+- nouveau calcul contre l'ancien, en mode invisible : 868 et 732 pas/s contre 640 et 482 (environ ×1,35 à ×1,5) ;
+- préréglages avec le nouveau calcul : complet 406 à 570 pas/s, intermédiaire 718 à 920, invisible 747 à 931.
+
+Au-delà, c'est le calcul lui-même qui limite (rayons, réseau, suivi du tour) : le mode invisible ne gagne que peu sur l'intermédiaire.
+
+## Décors en shader (`shader-settings.js`, `shader-decor.js`, `heat-map.js`, étape 27)
+
+Le canevas du jeu reste en 2D. Le décor est dessiné par un **shader GLSL** dans un `p5.Graphics` WEBGL séparé (densité de pixels 1), puis affiché avec `image()` à la place du décor pré-rendu. Les voitures, les rayons, les obstacles et les flammes sont dessinés par-dessus, en 2D, comme avant. Ce sont des règles d'affichage : ni la perception, ni le steering, ni la locomotion ne changent.
+
+**Désactivation** (menu « Performances », section « Décors en shader ») :
+- **Effets shader : activés / désactivés** est l'interrupteur général. Les préréglages **intermédiaire** et **invisible** le coupent, **complet** le rallume.
+- Sans WebGL, ou si un shader ne compile pas, le décor classique s'affiche et le menu l'indique (« WebGL indisponible ») ; une seule tentative.
+- En mode invisible, rien n'est dessiné.
+- Shaders coupés : les options ci-dessous sont grisées et aucune ressource WebGL n'est créée.
+
+**Options** (mémorisées dans `f1-neuroevolution-shaders-v1`) :
+
+| Option | Effet |
+|---|---|
+| **Ambiance : auto (…)** | Fait défiler auto, jour, nuit, pluie, canicule, neige, brouillard, néon, crépuscule. « Auto » prend l'ambiance du circuit (champ `ambiance` des tracés), « jour » par défaut |
+| **Carte de chaleur** | Passages des voitures en bleu → cyan, sorties de piste en rouge : on voit le virage qui bloque la population |
+| **Traînée du leader** | Trait doré qui s'estompe derrière la meilleure voiture |
+| **Herbe au vent** | Rafales qui éclaircissent puis assombrissent l'herbe, par texels de 3 px comme l'herbe Minecraft |
+
+Les ambiances :
+- **nuit** : scène sombre, chaque voiture affichée (24 au plus, les meilleures d'abord) éclaire un cône devant elle ;
+- **pluie** : lumière grise, flaques brillantes sur l'asphalte, gouttes en traits obliques ;
+- **canicule** : mirage (l'image ondule au-dessus de l'asphalte), herbe jaunie ;
+- **neige** : herbe et dégagement recouverts, flocons sur deux plans ;
+- **brouillard** : nappes de brume qui dérivent ;
+- **néon** : scène noire, lignes de bord lumineuses rose → cyan, quadrillage sur l'herbe ;
+- **crépuscule** : lumière orangée en haut, ombres violettes en bas.
+
+Ambiances « auto » : Spa et Interlagos sous la pluie, Silverstone dans le brouillard, Monaco au crépuscule, Red Bull Ring sous la neige, Hungaroring en canicule, Inferno de nuit, Le Hachoir en néon ; les niveaux à thèmes ont aussi la leur (Croissant de lune de nuit, Labyrinthe en néon…).
+
+Fonctionnement :
+- **Textures.** `u_track` est le décor pré-rendu, recopié une fois par circuit ou par décor. `u_mask` est le masque du circuit (rouge = asphalte, vert = lignes de bord). `u_heat` est la carte de chaleur, une grille de 150 × 95 cases de 8 px envoyée 6 fois par seconde. `u_trail` est la traînée.
+- **Mémoire graphique.** Les images source gardent la même identité : p5 met à jour leur texture au lieu d'en créer une, ce qui évite les fuites pendant le parcours de 50 niveaux.
+- **Traînée.** Deux framebuffers (p5.js 1.7) servent de double tampon : chaque image relit la précédente, l'estompe (× 0,965 − 0,004) et ajoute le segment parcouru par le leader. L'intensité est proportionnelle à la longueur du segment, sinon une voiture lente sature le trait en blanc. Il n'y a pas de trait si le leader change, saute (nouvelle génération) ou s'arrête.
+- **Carte de chaleur.** Elle est enregistrée à chaque pas de simulation, avant le remplacement des lignées : aucune sortie de piste n'est perdue en accéléré, et chacune n'est comptée qu'une fois. Elle s'estompe de 0,4 % par image (environ 20 s) et est effacée au changement de circuit. Son échelle est logarithmique, pour que les passages rares restent visibles.
+- **Temps du shader.** Le temps vient du numéro d'image (60 images/s), ramené sous 600 s pour la précision des flottants GLSL.
+
+Mesure dans le navigateur (Monza puis Le Hachoir, 60 voitures, ×1, nuit + carte de chaleur) : environ 7 ms par image, calcul compris.
+
 ## Décor léger (`decor.js`)
 
-Le bouton **Décor : herbe / Décor : léger**, en haut à droite de l'écran, bascule entre les deux décors. Le choix est mémorisé dans le navigateur ; l'entraînement en cours continue (seul le décor est redessiné).
+Le bouton **Décor : herbe / Décor : léger**, dans le menu « Performances », bascule entre les deux décors. Le choix est mémorisé dans le navigateur ; l'entraînement en cours continue (seul le décor est redessiné).
 
 - **Herbe** : texture façon Minecraft (`grass.js`), environ 100 000 petits carrés dessinés une fois à chaque construction du circuit.
 - **Léger** : fond vert uni (`LIGHT_BACKGROUND`) et **densité de pixels 1** pour le canevas et le décor. La piste (asphalte, bords, vibreurs, ligne de départ) reste identique.
@@ -234,14 +302,40 @@ Les niveaux 6 à 10 (étape 20) travaillent les bases de la course. Ils ont la m
 
 Les niveaux 11 à 20 (étape 25) sont des niveaux complexes à thèmes, toujours au quart de la surface, piste de 14 m, 1 tour : le parcours compte donc 20 niveaux. Ils sont dessinés avec des aides de `training-circuits-data.js` : `roundCorners` (coins arrondis par une courbe de Bézier), `starPoints` (étoile), `lobePoints` (trèfle) et `densify` (points de contrôle régulièrement espacés : sans lui, la spline de Catmull-Rom déborde et fait des boucles quand des points serrés suivent un long côté). Les pointes (cœur, poisson, étoile, montagnes, croissant) ont un rayon plus petit que la demi-largeur de piste, comme les épingles F1 : la boucle du bord intérieur est coupée, et les tests imposent un rayon d'au moins 9 px (jamais d'angle vif). Les tests (`tests/training-themes.test.mjs`) vérifient aussi : au moins 1,5 tour de volant et 15 % de virages à gauche par niveau, les 5 épingles alternées du Serpent, les 7 demi-tours alternés du Château, les 14 angles droits du Labyrinthe et la symétrie du cœur, de l'os, du trèfle et de l'étoile.
 
+Les niveaux 21 à 50 (étape 29) en ajoutent 30, toujours au quart de la surface et en 1 tour : le parcours « Déploiement » compte donc **50 niveaux**.
+
+| Niveaux | Thème |
+|---|---|
+| 21 à 25 | Triangle, Pentagone, Goutte d'eau, Vague, Dent de scie |
+| 26 à 30 | Éclair, Fer à cheval, Papillon, Fleur, Flocon |
+| 31 à 35 | Sapin, Couronne, Fusée, Chat, Lettre M |
+| 36 à 40 | Lettre W (le M retourné), Lettre Z, Lettre F, Escalier, Dents du requin |
+| 41 à 45 | Ruban, Clé, Cactus, Volcan, Pieuvre |
+| 46 à 50 | Boomerang, Dragon, Montagnes russes, Trombone, Dédale ; **piste de 12 m** |
+
+Nouvelles aides de tracé : `polygonPoints` (polygone régulier) et `mirrorY` (miroir haut-bas). Chaque tracé a été validé numériquement : bords sans croisement, rayon ≥ 9 px, au moins 20 px entre deux portions de la piste. Une contrainte est apparue : un angle de moins d'environ 45° entre deux côtés donne, avec une piste de 44 px, une boucle de bord trop longue pour être coupée. Les pointes ont donc été ouvertes (Z, Éclair, Sapin), et la lettre E (5 bandes ne tiennent pas en hauteur avec 20 px entre portions) est devenue un F. Tests : `tests/training-more-levels.test.mjs`.
+
 - Un niveau choisi à la main dans la vitrine des circuits s'entraîne comme un circuit normal (1 tour pour terminer).
-- **« Déploiement »** (parcours d'entraînement des 20 niveaux) : les voitures sélectionnées partent du niveau 1 (depuis leur dernier champion du garage s'il existe). Une lignée valide un niveau quand le meilleur d'une génération boucle le tour. Quand **toutes** les lignées l'ont validé, le circuit change automatiquement pour le niveau suivant ; la génération suivante y part du champion.
+- **« Déploiement »** (parcours d'entraînement des 50 niveaux) : les voitures sélectionnées partent du niveau 1 (depuis leur dernier champion du garage s'il existe). Une lignée valide un niveau quand le meilleur d'une génération boucle le tour. Quand **toutes** les lignées l'ont validé, le circuit change automatiquement pour le niveau suivant ; la génération suivante y part du champion.
 - Après le dernier niveau (10), le garage marque les lignées « entraînées sur les circuits d'entraînement » et une **démonstration** démarre sur le circuit F1 choisi avant : un champion par lignée roule avec la légende « Gén. N – voiture entraînée sur les circuits d'entraînement » sous la voiture (la course recommence en boucle, « Arrêter » la termine).
 - La voiture garde sa taille F1 sur tous les niveaux (échelle fixe 3,14 px/m) ; seule la piste du niveau 5 est plus étroite.
 - **Taille (étape 19)** : chaque niveau occupe **1/4 de la surface** qu'il occupait avant (`areaRatio: TRAINING_AREA_RATIO`, soit 1/4 ; tracé 2 fois plus petit dans chaque direction, centré sur le canvas, tour 2 fois plus court). La surface est mesurée sur la boîte englobante de la ligne médiane. La largeur de piste et la voiture ne changent pas, donc les virages sont plus serrés. Pour que les bords ne se croisent pas, deux tracés ont été redessinés : le slalom garde 2 ondulations mais avec une amplitude de 4 au lieu de 5, et les épingles passent de 5 à 3 demi-tours plus larges. Les tests vérifient le quart de surface (±10 % pour ces deux tracés redessinés), l'absence de croisement et au moins 20 px entre deux portions du tracé.
 - Ajouter un niveau : une entrée dans `TRAINING_CIRCUITS` (champs `level`, `skill`, `raceLaps`, `points`, `areaRatio`, `trackWidthMeters` facultatif) ; les tests vérifient qu'elle est valide.
 
 Mesure de l'étape 4 (2 lignées, graine fixe, tracés d'avant l'étape 19) : parcours complet terminé en 39 générations.
+
+## Circuits extrêmes (`circuits-data.js`, étape 30)
+
+Deux circuits de Formule 1 d'une difficulté **inhumaine**, à la suite des 8 circuits F1 (vitrine des circuits, groupe « Formule 1 ») :
+
+| Circuit | Piste | Marge de chaque côté | Particularité | Ambiance auto |
+|---|---|---|---|---|
+| **Inferno (circuit extrême)** | 8 m (25 px) | 9,4 px (3 m) | 5 rangées de créneaux : plus de 120 angles droits, 38 tours de volant sur un tour | nuit |
+| **Le Hachoir (circuit extrême)** | 7 m (22 px) | 7,9 px (2,5 m) | 2 lames en dents de scie : une vingtaine d'épingles aiguës (environ 143°) | néon |
+
+La voiture garde sa taille F1 (2 m de large). À Monza, elle dispose de 18,9 px de marge de chaque côté. Ici, un écart de **10 px (3 m)** vers la droite suffit à l'éliminer : c'est testé. Les virages sont plus serrés que la demi-largeur de piste (bord intérieur coupé par `removeEdgeLoops`). Ces circuits restent faisables : une voiture qui suit la ligne médiane boucle le tour sans s'en écarter.
+
+Aides de tracé : `crenelPoints` (créneaux à angles droits) et `sawPoints` (dents de scie). Le placement d'obstacles au hasard n'y trouve presque jamais de place : un passage libre de 3 largeurs de voiture est plus large que la piste. Tests : `tests/extreme-circuits.test.mjs`.
 
 ## Architecture du réseau depuis l'interface (`network.html`, `architecture.js`)
 
@@ -292,7 +386,7 @@ Une configuration invalide est refusée avec un message (bandeau du circuit). `n
 
 ## Fichiers
 
-`vehicle.js` (base protégée), `car.js` (`Car extends Vehicle`), `network-config.js`, `neural-network.js`, `architecture.js`, `confidence.js`, `evolution.js`, `training-circuits-data.js`, `curriculum.js`, `garage.js`, `network.html` + `network-viewer.js`, `ray.js`, `ray-editor.js`, `sensor-settings.js`, `sim-speed.js`, `car-design.js`, `showroom.js`, `circuit-showroom.js`, `model-file.js`, `obstacle.js`, `obstacle-editor.js`, `obstacle-catalog.js`, `obstacle-placement.js`, `obstacle-showroom.js`, `circuit.js` (géométrie, `LapTracker`), `circuits-data.js`, `brands.js`, `random.js` (RNG à graine), `grass.js`, `decor.js`, `track-renderer.js`, `finish-flames.js`, `sketch.js`.
+`vehicle.js` (base protégée), `car.js` (`Car extends Vehicle`), `network-config.js`, `neural-network.js`, `architecture.js`, `confidence.js`, `evolution.js`, `training-circuits-data.js`, `curriculum.js`, `garage.js`, `network.html` + `network-viewer.js`, `ray.js`, `ray-editor.js`, `sensor-settings.js`, `sim-speed.js`, `car-design.js`, `showroom.js`, `circuit-showroom.js`, `model-file.js`, `obstacle.js`, `obstacle-editor.js`, `obstacle-catalog.js`, `obstacle-placement.js`, `obstacle-showroom.js`, `circuit.js` (géométrie, `LapTracker`), `circuits-data.js`, `brands.js`, `random.js` (RNG à graine), `grass.js`, `decor.js`, `performance-settings.js`, `shader-settings.js`, `heat-map.js`, `shader-decor.js`, `track-renderer.js`, `finish-flames.js`, `sketch.js`.
 
 ## Tests
 

@@ -52,7 +52,7 @@ function mirrorGap(circuit) {
 }
 
 test("10 niveaux à thèmes : niveaux 11 à 20, 1 tour, quart de surface, compétence décrite", () => {
-  assert.deepEqual(plain(ex.trainingLevelKeys().slice(10)), THEMES);
+  assert.deepEqual(plain(ex.trainingLevelKeys().slice(10, 20)), THEMES);
   THEMES.forEach((key, i) => {
     const level = ex.TRAINING_CIRCUITS[key];
     assert.equal(level.level, 11 + i, key);
@@ -62,7 +62,7 @@ test("10 niveaux à thèmes : niveaux 11 à 20, 1 tour, quart de surface, compé
     assert.ok(level.skill.length > 30, key);
     assert.match(level.name, new RegExp(`^Niveau ${11 + i} – Le |^Niveau ${11 + i} – L'|^Niveau ${11 + i} – Les `));
   });
-  assert.equal(ex.trainingLevelKeys().length, 20);
+  assert.equal(ex.trainingLevelKeys().length, 50, "30 niveaux de plus à l'étape 29");
 });
 
 test("niveaux à thèmes valides : bords sans croisement, dans le canvas, virages franchissables", () => {
@@ -149,7 +149,7 @@ test("aides de tracé : roundCorners, densify, starPoints et lobePoints", () => 
   assert.ok(Math.abs(Math.max(...radii) - 28) < 1e-9 && Math.abs(Math.min(...radii) - 16) < 1e-9);
 });
 
-test("une voiture part sur chaque niveau à thème ; le parcours compte 20 niveaux", () => {
+test("une voiture part sur chaque niveau à thème ; le parcours compte tous les niveaux (50)", () => {
   const spec = { brand: "Ferraaa", model: "F40o", maxSpeed: 4.5, maxForce: 0.22 };
   const straight = { inputNodes: 6, predict: () => [0.5, 0.6] };
   for (const key of THEMES) {
@@ -158,5 +158,5 @@ test("une voiture part sur chaque niveau à thème ; le parcours compte 20 nivea
     assert.equal(car.dead, false, key);
     assert.ok(car.progress > 0, key);
   }
-  assert.equal(new ex.Curriculum(ex.trainingLevelKeys(), ["Ferraaa F40o"]).levelKeys.length, 20);
+  assert.equal(new ex.Curriculum(ex.trainingLevelKeys(), ["Ferraaa F40o"]).levelKeys.length, 50);
 });

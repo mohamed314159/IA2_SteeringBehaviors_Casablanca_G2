@@ -70,7 +70,8 @@ class Car extends Vehicle {
   // Lance les rayons contre les murs proches. Retourne les entrées du
   // réseau (proximité 1 = mur collé, 0 = rien en vue, puis vitesse normalisée).
   sense(extraWalls = []) {
-    const walls = this.circuit.wallsNear(this.pos, this.sightDistance).concat(extraWalls);
+    // Murs à portée seulement (étape 26) : mêmes distances, moins de calculs par rayon.
+    const walls = wallsWithinReach(this.circuit.wallsNear(this.pos, this.sightDistance), this.pos, this.sightDistance).concat(extraWalls);
     const inputs = [];
     for (let i = 0; i < this.rayCount; i++) {
       const ray = this.rays[i];
