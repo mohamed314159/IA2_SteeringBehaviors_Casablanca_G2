@@ -8,14 +8,16 @@ import { createMemoryStorage, loadExample, SCRIPTS } from "./p5-adapter.mjs";
 // Faux p5 pour ShaderDecor : enregistre les appels (le vrai rendu WebGL est
 // vérifié dans le navigateur, voir README).
 function fakeP5() {
-  const log = { draws: [], copies: 0, heatUploads: 0, framebuffers: [], masks: 0 };
+  const log = { draws: [], copies: 0, heatUploads: 0, framebuffers: [], masks: 0, maskProps: 0 };
   const shape = () => ({});
   const g2d = () => ({
     elt: {}, pixelDensity() {}, push() {}, pop() {}, background() { log.masks++; }, noFill() {}, strokeJoin() {},
-    stroke() {}, strokeWeight() {}, beginShape: shape, vertex() {}, endShape() {}
+    stroke() {}, strokeWeight() {}, beginShape: shape, vertex() {}, endShape() {},
+    noStroke() {}, fill() {}, translate() {}, rotate() {}, rectMode() {},
+    rect() { log.maskProps++; }, ellipse() { log.maskProps++; }
   });
   const globals = {
-    WEBGL: "webgl", ROUND: "round", CLOSE: "close",
+    WEBGL: "webgl", ROUND: "round", CLOSE: "close", CENTER: "center",
     createGraphics: () => g2d(),
     createImage: (w, h) => ({
       width: w, height: h, pixels: new Uint8ClampedArray(w * h * 4), modified: false,
@@ -290,7 +292,8 @@ test("ShaderDecor : décor copié une fois par circuit, traînée en double tamp
   fake.log.heatUploads = 0;
   const decor = new ex.ShaderDecor(1200, 760, fake.createFx);
   const circuit = new ex.Circuit(ex.F1_CIRCUITS.monza, { pixelsPerMeter: PPM });
-  decor.setTrack({ elt: {} }, circuit);
+  const props = [{ type: "arbre", x: 50, y: 50, r: 10 }, { type: "tribune", x: 300, y: 50, angle: 0, length: 100, depth: 26 }];
+  decor.setTrack({ elt: {} }, circuit, props);
   const cars = [fakeCar(200, 300, 0), fakeCar(210, 300, 0)];
   const settings = { ambiance: "auto", heatmap: true, trail: true, wind: true };
   const base = fake.log.framebuffers.length;   // les deux framebuffers de ce décor : base et base + 1
@@ -298,6 +301,7 @@ test("ShaderDecor : décor copié une fois par circuit, traînée en double tamp
   assert.equal(out1, decor.fx);
   assert.equal(decor.available, true);
   assert.equal(fake.log.copies, 2, "décor + masque copiés");
+  assert.equal(fake.log.maskProps, 2, "objets posés sur l'herbe marqués dans le masque (canal bleu)");
   cars[1].pos.x += 3;
   decor.render({ frame: 11, ambiance: "nuit", settings, cars, leader: cars[1] });
   assert.equal(fake.log.copies, 2, "pas de nouvelle copie sans changement de circuit");

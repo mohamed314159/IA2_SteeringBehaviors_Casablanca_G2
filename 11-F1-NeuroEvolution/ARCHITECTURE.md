@@ -35,9 +35,10 @@ Règle de mise à jour : chaque nouvelle demande est ajoutée à la pile sous la
 | 25 | 10 autres niveaux d'entraînement complexes à thèmes | **DONE** |
 | 26 | Alléger pour accélérer l'entraînement : menu « Performances » (remplace le bouton du décor), circuit + voitures invisibles, optimisations intermédiaires | **DONE** |
 | 27 | Décor plus stylé : décors en shader (ambiances, herbe au vent, phares, carte de chaleur, traînée du leader), désactivables | **DONE** |
-| 28 | Voitures plus jolies | TODO |
+| 28 | Voitures plus jolies | **DONE** |
 | 29 | 30 niveaux d'entraînement de plus (21 à 50) | **DONE** |
 | 30 | 2 circuits F1 extrêmes, d'une difficulté inhumaine (« si tu touches le volant à droite, tu meurs ») | **DONE** |
+| 31 | « Je ne veux pas voir d'herbe avec rien au-dessus » : décor posé sur l'herbe | **DONE** |
 
 ### Étape 1 – Circuit, décor, marques, rayons — **DONE**
 - Trois circuits F1 stylisés (Monza, Spa, Interlagos) lissés par Catmull-Rom ; bords sans croisement vérifiés par les tests.
@@ -192,6 +193,15 @@ Règle de mise à jour : chaque nouvelle demande est ajoutée à la pile sous la
 - Marge latérale ≤ la moitié de celle de Monza : un écart de 10 px élimine la voiture (testé), virages plus serrés que la demi-largeur, ligne médiane faisable.
 - Tests : `tests/extreme-circuits.test.mjs` ; tests F1 et vitrine mis à jour (10 circuits F1).
 
+### Étape 28 – Voitures plus jolies — **DONE**
+- `car-design.js` : `chassisOutline` (silhouette symétrique), `shadeColor` (reflets / ombres), ombre portée (pas pour une voiture éliminée), dérives, aileron arrière à deux plans, pneus arrondis, casque coloré. Contour contrasté et livrées de l'étape 22 conservés.
+- Tests : `tests/scenery.test.mjs` (silhouette, couleurs, ombre) ; faux p5 de `tests/showroom.test.mjs` complété (`beginShape`, `vertex`, `endShape`).
+
+### Étape 31 – Décor posé sur l'herbe — **DONE**
+- `scenery.js` : `planScenery` (pur, graine fixe, un plan par circuit dans `buildCircuit`) puis `drawScenery` dans le décor pré-rendu, avant la piste. Grille de 30 px : arbres, sapins, buissons, rochers, fleurs, tentes ; étangs (essais bornés) ; tribunes le long des lignes droites ; pneus à l'extérieur des virages.
+- Règle de scène décorative : ni murs ni collisions. Masque des shaders : canal bleu (pas de neige, de vent ni de quadrillage néon dessus).
+- Tests : `tests/scenery.test.mjs` (hors piste, sans chevauchement, herbe couverte, tribunes F1, déterminisme, ordre de dessin) ; `tests/shaders.test.mjs` (objets dans le masque).
+
 ## 2. Modèle (Reynolds)
 
 ```text
@@ -224,6 +234,7 @@ Règles de course (scène) : sortie de piste, immobilité, tours  (Car.applyRace
 | `track-renderer.js`, `grass.js` | Décor statique dessiné une seule fois |
 | `finish-flames.js` | Flammes sur la ligne d'arrivée : détection des tours bouclés, particules, dessin |
 | `decor.js` | Décor herbe ou léger (fond uni, densité de pixels 1), mémorisé |
+| `scenery.js` | Objets posés sur l'herbe : plan (pur, testé) et dessin dans le décor pré-rendu |
 | `shader-settings.js` | Décors en shader : réglages, ambiances, phares, traînée du leader (fonctions pures) |
 | `heat-map.js` | Carte de chaleur des passages et sorties de piste (grille, estompage, texture) |
 | `shader-decor.js` | GLSL et rendu WebGL du décor (`ShaderDecor`), repli sur le décor pré-rendu |

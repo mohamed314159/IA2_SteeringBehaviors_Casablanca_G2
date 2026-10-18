@@ -1,6 +1,7 @@
 // Rendu statique du circuit (décor, asphalte, vibreurs, ligne de départ),
 // dessiné une seule fois dans un p5.Graphics puis affiché à chaque image.
-// Décor : herbe texturée ou fond uni (mode léger, decor.js).
+// Décor : herbe texturée ou fond uni (mode léger, decor.js), puis les objets
+// posés sur l'herbe (scenery.js, étape 31).
 
 // Indices de la ligne médiane situés dans un virage (changement de cap > seuil).
 function curvedIndices(circuit, threshold = 0.06, span = 3) {
@@ -15,8 +16,9 @@ function curvedIndices(circuit, threshold = 0.06, span = 3) {
   return result;
 }
 
-function drawTrackLayer(g, circuit, rng, decor = DECOR_GRASS) {
+function drawTrackLayer(g, circuit, rng, decor = DECOR_GRASS, scenery = []) {
   drawDecorBackground(g, decor, rng);
+  drawScenery(g, scenery);
   const n = circuit.center.length;
 
   g.push();

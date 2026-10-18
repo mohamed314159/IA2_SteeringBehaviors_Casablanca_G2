@@ -26,7 +26,7 @@ class Vector {
 
 export const SCRIPTS = [
   "random.js", "vehicle.js", "ray.js", "sensor-settings.js", "sim-speed.js", "circuits-data.js", "training-circuits-data.js", "circuit.js",
-  "track-renderer.js", "finish-flames.js", "circuit-showroom.js", "brands.js", "network-config.js", "neural-network.js", "architecture.js", "grass.js", "decor.js", "confidence.js", "car-design.js", "obstacle.js",
+  "track-renderer.js", "finish-flames.js", "circuit-showroom.js", "brands.js", "network-config.js", "neural-network.js", "architecture.js", "grass.js", "decor.js", "scenery.js", "confidence.js", "car-design.js", "obstacle.js",
   "obstacle-catalog.js", "obstacle-placement.js", "obstacle-showroom.js", "car.js",
   "evolution.js", "performance-settings.js", "shader-settings.js", "heat-map.js", "shader-decor.js", "garage.js", "curriculum.js", "showroom.js", "model-file.js", "ray-editor.js", "network-viewer.js"
 ];
@@ -110,6 +110,9 @@ export function loadExample(files = SCRIPTS, globals = {}) {
     headlightData, TrailTracker, HeatMap, HEAT_CELL, HEAT_VISIT, HEAT_CRASH, HEAT_DECAY,
     SHADER_VERT, BACKGROUND_FRAG, TRAIL_FRAG, declaredUniforms, backgroundUniforms, trailUniforms, drawTrackMask, ShaderDecor,
     TRAIL_FADE, HEAT_UPLOAD_EVERY, TRAIL_GLOW_PER_PX, TRAIL_GLOW_MIN, TRAIL_GLOW_MAX, trailIntensity, TRAIL_MIN_STEP,
+    SCENERY_CELL, SCENERY_TRACK_GAP, SCENERY_SPACING, SCENERY_KINDS, TYRE_RADIUS, TYRE_TRACK_GAP, GRANDSTAND_DEPTH,
+    GRANDSTAND_MIN_STRAIGHT, sceneryDistance, grandstandPerimeter, distanceToTrack, straightRuns, planScenery, drawScenery,
+    shadeColor, chassisOutline,
     Garage, GARAGE_STORAGE_KEY, GARAGE_HISTORY_LIMIT, networkLayout, networkLabels
   })`, context);
 }

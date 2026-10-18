@@ -7,6 +7,8 @@ const TRACK_WIDTH = 44;            // px ≈ 14 m → voiture 17,6 x 6,3 px (5,6
 
 let circuit;
 let trackLayer;
+let scenery = [];                  // objets posés sur l'herbe (scenery.js), un plan par circuit
+const SCENERY_SEED = 7;
 let cars = [];
 let generationsPlayed = 0;
 let training = false;              // évolution en cours (libre ou parcours d'entraînement)
@@ -218,8 +220,8 @@ function buildTrackLayer() {
   if (trackLayer) trackLayer.remove();
   trackLayer = createGraphics(CANVAS_WIDTH, CANVAS_HEIGHT);
   trackLayer.pixelDensity(decorPixelDensity(decor, displayDensity()));
-  drawTrackLayer(trackLayer, circuit, createRng(42), decor);
-  shaderDecor.setTrack(trackLayer, circuit);   // recopié dans la texture du shader au prochain dessin
+  drawTrackLayer(trackLayer, circuit, createRng(42), decor, scenery);
+  shaderDecor.setTrack(trackLayer, circuit, scenery);   // recopié dans la texture du shader au prochain dessin
 }
 
 // Longueur des rayons : curseur (réagit pendant le glissement), boutons − / +
@@ -469,6 +471,7 @@ function buildCircuit(key) {
     canvasWidth: CANVAS_WIDTH, canvasHeight: CANVAS_HEIGHT, trackWidth: TRACK_WIDTH,
     pixelsPerMeter: TRACK_WIDTH / F1_TRACK_WIDTH_M
   });
+  scenery = planScenery(circuit, createRng(SCENERY_SEED), CANVAS_WIDTH, CANVAS_HEIGHT);
   buildTrackLayer();
   shaderDecor.clearHistory();       // carte de chaleur et traînée propres à ce circuit
   if (ui.shaderOptions) showShaderOptions();   // « Ambiance : auto (…) » suit le circuit

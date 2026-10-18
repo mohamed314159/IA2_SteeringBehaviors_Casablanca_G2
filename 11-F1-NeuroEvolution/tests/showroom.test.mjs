@@ -88,9 +88,10 @@ test("cartes de la vitrine sans fiche technique (numéro, livrée, vitesse, adh�
 function fakeGraphics() {
   const calls = {};
   const count = (name) => (...args) => { calls[name] = (calls[name] || 0) + 1; return args; };
-  const g = { calls, CENTER: "center", HALF_PI: Math.PI / 2, BOLD: "bold" };
+  const g = { calls, CENTER: "center", HALF_PI: Math.PI / 2, BOLD: "bold", CLOSE: "close" };
   for (const name of ["push", "pop", "rectMode", "noStroke", "stroke", "strokeWeight", "fill", "noFill",
-    "rect", "line", "triangle", "ellipse", "arc", "textAlign", "textStyle", "textSize", "text", "translate", "rotate"]) {
+    "rect", "line", "triangle", "ellipse", "arc", "textAlign", "textStyle", "textSize", "text", "translate", "rotate",
+    "beginShape", "vertex", "endShape"]) {
     g[name] = count(name);
   }
   g.color = () => ({ setAlpha() {} });

@@ -35,9 +35,10 @@ Le détail de chaque étape et l'architecture du projet sont dans [ARCHITECTURE.
 | 25 | 10 autres niveaux d'entraînement complexes à thèmes | ✅ |
 | 26 | Menu « Performances » (remplace le bouton du décor) : circuit + voitures invisibles et allègements intermédiaires ; pas de simulation plus rapide | ✅ |
 | 27 | Décor plus stylé : décors en shader (ambiances, herbe au vent, phares, carte de chaleur, traînée), désactivables | ✅ |
-| 28 | Voitures plus jolies | à faire |
+| 28 | Voitures plus jolies : silhouette de F1, ombre, reflets, casque | ✅ |
 | 29 | 30 niveaux d'entraînement de plus (21 à 50) | ✅ |
 | 30 | 2 circuits F1 extrêmes, d'une difficulté inhumaine (Inferno, Le Hachoir) | ✅ |
+| 31 | Plus d'herbe vide : arbres, tribunes, pneus, étangs… posés sur l'herbe | ✅ |
 
 ## Lancement
 
@@ -221,6 +222,38 @@ Fonctionnement :
 
 Mesure dans le navigateur (Monza puis Le Hachoir, 60 voitures, ×1, nuit + carte de chaleur) : environ 7 ms par image, calcul compris.
 
+## Décor posé sur l'herbe (`scenery.js`, étape 31)
+
+L'herbe n'est plus jamais vide : chaque case de 30 px assez loin de la piste reçoit un objet. Le plan est calculé une fois par circuit avec une graine fixe, puis dessiné dans le décor pré-rendu : il ne coûte rien par image.
+
+| Objet | Placement |
+|---|---|
+| Arbres, sapins, buissons, rochers, fleurs, tentes | Tirés au hasard (poids, taille) dans chaque case, décalés de ± 9 px ; un objet plus petit est essayé si le premier ne tient pas |
+| Étangs | 2 au plus, rayon 26 à 42 px, 40 essais au maximum |
+| Tribunes | Au milieu des 3 plus longues lignes droites (≥ 100 px, cap qui varie de moins de 6° sur ± 60 px), du côté où elles tiennent, parallèles à la piste, avec spectateurs et toit |
+| Piles de pneus | 3 par virage serré, à l'extérieur, contre le bord de piste |
+
+Règles de placement :
+- aucun objet à moins de 14 px du bord de piste (6 px pour les pneus) ;
+- aucun chevauchement (2 px d'écart au moins) ;
+- tout objet reste entier dans le canvas.
+
+Les objets ne sont pas des murs : les rayons et les voitures les ignorent. Dans les décors en shader, le masque les marque en bleu : la neige ne fait que les saupoudrer, et le vent et le quadrillage néon ne s'y appliquent pas.
+
+Le plan prend environ 150 ms par circuit (projection sur la ligne médiane pour chaque case). Mesure dans le navigateur : environ 1,3 s pour construire Monza avec l'herbe texturée, contre 0,9 s avant l'étape. Tests : `tests/scenery.test.mjs`. Ils vérifient qu'aucun objet n'est sur la piste, qu'aucun objet n'en chevauche un autre, et que moins de 0,5 % des points d'herbe sont à plus de 30 px d'un objet. Ils vérifient aussi les tribunes des 8 circuits F1, le déterminisme du plan et l'ordre de dessin (fond, objets, puis piste).
+
+## Voitures plus jolies (`car-design.js`, étape 28)
+
+Les voitures ont été redessinées, sur le circuit comme dans la vitrine :
+- silhouette de F1 (`chassisOutline`, symétrique) : nez effilé, cockpit, pontons larges, boîte de vitesses qui se resserre ;
+- ombre portée, sauf pour une voiture éliminée ;
+- reflet clair au centre du capot et flancs plus sombres (`shadeColor`) ;
+- dérives d'aileron avant de la couleur de la carrosserie, aileron arrière à deux plans ;
+- pneus arrondis avec une bande de roulement plus claire, entrées d'air des pontons ;
+- casque de la couleur d'accent ; dans la vitrine, en plus, un reflet sur la visière.
+
+Le contour contrasté de l'étape 22 et les livrées sont conservés.
+
 ## Décor léger (`decor.js`)
 
 Le bouton **Décor : herbe / Décor : léger**, dans le menu « Performances », bascule entre les deux décors. Le choix est mémorisé dans le navigateur ; l'entraînement en cours continue (seul le décor est redessiné).
@@ -386,7 +419,7 @@ Une configuration invalide est refusée avec un message (bandeau du circuit). `n
 
 ## Fichiers
 
-`vehicle.js` (base protégée), `car.js` (`Car extends Vehicle`), `network-config.js`, `neural-network.js`, `architecture.js`, `confidence.js`, `evolution.js`, `training-circuits-data.js`, `curriculum.js`, `garage.js`, `network.html` + `network-viewer.js`, `ray.js`, `ray-editor.js`, `sensor-settings.js`, `sim-speed.js`, `car-design.js`, `showroom.js`, `circuit-showroom.js`, `model-file.js`, `obstacle.js`, `obstacle-editor.js`, `obstacle-catalog.js`, `obstacle-placement.js`, `obstacle-showroom.js`, `circuit.js` (géométrie, `LapTracker`), `circuits-data.js`, `brands.js`, `random.js` (RNG à graine), `grass.js`, `decor.js`, `performance-settings.js`, `shader-settings.js`, `heat-map.js`, `shader-decor.js`, `track-renderer.js`, `finish-flames.js`, `sketch.js`.
+`vehicle.js` (base protégée), `car.js` (`Car extends Vehicle`), `network-config.js`, `neural-network.js`, `architecture.js`, `confidence.js`, `evolution.js`, `training-circuits-data.js`, `curriculum.js`, `garage.js`, `network.html` + `network-viewer.js`, `ray.js`, `ray-editor.js`, `sensor-settings.js`, `sim-speed.js`, `car-design.js`, `showroom.js`, `circuit-showroom.js`, `model-file.js`, `obstacle.js`, `obstacle-editor.js`, `obstacle-catalog.js`, `obstacle-placement.js`, `obstacle-showroom.js`, `circuit.js` (géométrie, `LapTracker`), `circuits-data.js`, `brands.js`, `random.js` (RNG à graine), `grass.js`, `decor.js`, `scenery.js`, `performance-settings.js`, `shader-settings.js`, `heat-map.js`, `shader-decor.js`, `track-renderer.js`, `finish-flames.js`, `sketch.js`.
 
 ## Tests
 

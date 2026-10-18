@@ -6,8 +6,8 @@
 // Textures envoyées au shader :
 //   u_track : le décor pré-rendu (track-renderer.js), copié une fois par circuit
 //   u_mask  : masque du circuit, copié une fois par circuit
-//             (rouge = asphalte, vert = lignes blanches de bord ; le reste, dégagement
-//             compris, est traité comme de l'herbe)
+//             (rouge = asphalte, vert = lignes blanches de bord, bleu = objets posés
+//             sur l'herbe ; le reste, dégagement compris, est traité comme de l'herbe)
 //   u_heat  : carte de chaleur (heat-map.js), petite texture mise à jour 6 fois par seconde
 //   u_trail : traînée du leader, framebuffer estompé à chaque image (double tampon)
 // Les images source gardent la même identité : p5 met à jour leur texture au
@@ -77,7 +77,8 @@ void main() {
   vec2 q = floor(px / 3.0) * 3.0;              // texels de 3 px, comme l'herbe Minecraft
   vec4 mask = texture2D(u_mask, uv);
   float track = clamp(mask.r + mask.g, 0.0, 1.0);
-  float grass = 1.0 - track;
+  float props = mask.b;                        // arbres, tribunes… (scenery.js)
+  float grass = (1.0 - track) * (1.0 - props);
 
   // Canicule : l'air chaud fait onduler l'image, surtout au-dessus de l'asphalte.
   vec2 wobble = vec2(noise(px * 0.04 + vec2(0.0, u_time * 2.0)), noise(px * 0.04 + vec2(7.0, u_time * 1.7))) - 0.5;
@@ -99,6 +100,7 @@ void main() {
   // Neige : herbe recouverte, piste froide, flocons qui tombent.
   float snowCover = grass * (0.82 + 0.18 * noise(q * 0.08));
   color = mix(color, vec3(0.93, 0.96, 1.0) * (0.86 + 0.14 * noise(q * 0.21)), snowCover * u_snow * 0.9);
+  color = mix(color, color * 0.75 + vec3(0.25), props * u_snow * 0.35);   // objets juste saupoudrés
   color = mix(color, color * vec3(0.85, 0.92, 1.08), track * u_snow * 0.6);
   for (int layer = 0; layer < 2; layer++) {
     float size = layer == 0 ? 26.0 : 15.0;
@@ -243,8 +245,9 @@ function trailUniforms(previous, segment, width, height) {
   };
 }
 
-// Masque du circuit dans un p5.Graphics 2D : asphalte en rouge, lignes de bord en vert.
-function drawTrackMask(g, circuit) {
+// Masque du circuit dans un p5.Graphics 2D : asphalte en rouge, lignes de bord en
+// vert, objets posés sur l'herbe en bleu (la neige et le vent ne les recouvrent pas).
+function drawTrackMask(g, circuit, scenery = []) {
   g.push();
   g.background(0);
   g.noFill();
@@ -256,6 +259,20 @@ function drawTrackMask(g, circuit) {
   g.strokeWeight(3);
   drawClosedPolyline(g, circuit.leftEdge);
   drawClosedPolyline(g, circuit.rightEdge);
+  g.noStroke();
+  g.fill(0, 0, 255);
+  for (const item of scenery) {
+    if (item.type === "tribune") {
+      g.push();
+      g.translate(item.x, item.y);
+      g.rotate(item.angle);
+      g.rectMode(CENTER);
+      g.rect(0, 0, item.length, item.depth);
+      g.pop();
+    } else {
+      g.ellipse(item.x, item.y, item.r * 2, item.r * 2);
+    }
+  }
   g.pop();
 }
 
@@ -305,9 +322,10 @@ class ShaderDecor {
   }
 
   // Nouveau décor pré-rendu (changement de circuit ou de décor) : copié au prochain dessin.
-  setTrack(trackLayer, circuit) {
+  setTrack(trackLayer, circuit, scenery = []) {
     this.trackLayer = trackLayer;
     this.circuit = circuit;
+    this.scenery = scenery;
     this.trackDirty = true;
   }
 
@@ -320,7 +338,7 @@ class ShaderDecor {
   copyTrack() {
     this.trackImage.drawingContext.drawImage(this.trackLayer.elt, 0, 0, this.width, this.height);
     this.trackImage.setModified(true);
-    drawTrackMask(this.maskLayer, this.circuit);
+    drawTrackMask(this.maskLayer, this.circuit, this.scenery);
     this.maskImage.drawingContext.drawImage(this.maskLayer.elt, 0, 0, this.width, this.height);
     this.maskImage.setModified(true);
     this.trackDirty = false;
