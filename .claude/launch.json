@@ -35,6 +35,15 @@
       ],
       "port": 8763,
       "autoPort": false
+    },
+    {
+      "name": "parking-casanearshore",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-c",
+        "import os,sys,runpy; os.chdir('12-ParkingCasanearshore'); sys.argv=['serveur.py','8771']; runpy.run_path('outils/serveur.py', run_name='__main__')"
+      ],
+      "port": 8771
     }
   ]
 }

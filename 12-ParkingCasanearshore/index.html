@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Parking Casanearshore</title>
+    <link rel="stylesheet" type="text/css" href="style.css" />
+    <!-- p5.js 1.7.0, puis la base protégée, puis les aides, les sous-classes et la scène. -->
+    <script src="libraries/p5.min.js"></script>
+    <script src="vehicle.js"></script>
+    <script src="random.js"></script>
+    <script src="simUnits.js"></script>
+    <script src="geometry.js"></script>
+    <script src="path.js"></script>
+    <script src="mapProjection.js"></script>
+    <script src="data/casanearshore.js"></script>
+    <script src="roadNetwork.js"></script>
+    <script src="steeringAgent.js"></script>
+    <script src="collisions.js"></script>
+    <script src="building.js"></script>
+    <script src="campus.js"></script>
+    <script src="parkingSpot.js"></script>
+    <script src="parkingLot.js"></script>
+    <script src="gate.js"></script>
+    <script src="pillar.js"></script>
+    <script src="garage.js"></script>
+    <script src="parkingAllocator.js"></script>
+    <script src="parkingWorld.js"></script>
+    <script src="carModels.js"></script>
+    <script src="roadVehicle.js"></script>
+    <script src="luxuryCar.js"></script>
+    <script src="shuttle.js"></script>
+    <script src="tramCar.js"></script>
+    <script src="tram.js"></script>
+    <script src="traffic.js"></script>
+    <script src="transit.js"></script>
+    <script src="coffeeKiosk.js"></script>
+    <script src="bench.js"></script>
+    <script src="planter.js"></script>
+    <script src="esplanade.js"></script>
+    <script src="outfits.js"></script>
+    <script src="employee.js"></script>
+    <script src="crowd.js"></script>
+    <script src="clock.js"></script>
+    <script src="schedule.js"></script>
+    <script src="simSpeed.js"></script>
+    <script src="simulation.js"></script>
+    <script src="reglages.js"></script>
+    <script src="panneau.js"></script>
+    <script src="debug.js"></script>
+    <script src="camera.js"></script>
+    <script src="mapRenderer.js"></script>
+    <script src="sketch.js"></script>
+  </head>
+  <body>
+    <header id="barre">
+      <h1>Parking Casanearshore</h1>
+      <span id="horloge">08:30:00</span>
+      <nav aria-label="Temps">
+        <button type="button" id="bouton-pause" title="Pause / lecture (Espace)">⏸ Pause</button>
+        <button type="button" data-vitesse="1">×1</button>
+        <button type="button" data-vitesse="2">×2</button>
+        <button type="button" data-vitesse="4">×4</button>
+        <label class="case"><input type="checkbox" id="case-auto" checked /> Accélérer quand rien ne se passe</label>
+        <button type="button" id="bouton-recommencer" title="Recommencer la matinée (R)">↺ Recommencer</button>
+      </nav>
+      <span id="vitesse" aria-live="polite">▶ ×1</span>
+      <nav aria-label="Vues">
+        <button type="button" data-vue="ensemble">Vue d'ensemble</button>
+        <button type="button" data-vue="nord">Porte nord</button>
+        <button type="button" data-vue="sud">Porte sud</button>
+        <button type="button" data-vue="station">Station du tram</button>
+        <button type="button" id="bouton-garage" data-vue="garage">Voir le garage</button>
+      </nav>
+      <span id="compteur-places" aria-live="polite"></span>
+      <span id="surbrillance" aria-live="polite"></span>
+      <span id="aide">Glisser : déplacer · molette : zoom · G : garage · Espace : pause · D : debug · 1-8 : surbrillance · P : réglages</span>
+    </header>
+    <main id="scene"></main>
+    <footer id="credits">Carte : © OpenStreetMap contributors (ODbL)</footer>
+  </body>
+</html>
