@@ -16,10 +16,17 @@ const ROAD_CONFIG = {
   gateApproach: mPx(60),         // rejoint la file de la porte à 60 m de la ligne d'arrêt
   queueSlowRadius: mPx(10),      // A3 : freinage minimal derrière le véhicule de devant
   queueGapM: 2,                  // distance entre pare-chocs dans la file
+  laneToleranceM: 0.75,          // écart toléré autour de la voie (rayon du chemin) : la voiture reste sur la chaussée
+  cornerSpeed: kmh(8),           // vitesse dans un virage serré (rayon de virage v² / maxForce ≈ 2,6 m)
+  cornerMinAngle: 0.3,           // rad : en dessous (≈ 17°), pas de ralentissement
+  cornerFullAngle: 1.2,          // rad : au-delà (≈ 70°), vitesse de virage
+  cornerLookSegments: 8,         // segments du chemin examinés devant
   queueLookAhead: mPx(18),
   separationRadius: mPx(4),
   predictSteps: 8,               // position imminente des véhicules prioritaires (en pas)
-  deadlockSteps: stepsFor(1.5),  // interblocage mutuel détecté après 1,5 s
+  deadlockSteps: stepsFor(1.5),  // interblocage en cercle détecté après 1,5 s
+  deadlockChain: 8,              // longueur maximale du cercle examiné
+  blockedSpeed: 0.15,            // en dessous (px/pas), un véhicule en file est « bloqué »
   ignoreSteps: stepsFor(4),      // le plus ancien ignore l'autre pendant 4 s
   weights: { avoid: 2.5, separate: 0.8, follow: 1, arrive: 1, leader: 1 }
 };
@@ -46,10 +53,13 @@ class RoadVehicle extends SteeringAgent {
     this.path = options.path ?? null;
     if (this.path && this.path.points.length > 1) {
       this.heading = p5.Vector.sub(this.path.points[1], this.path.points[0]).normalize();
-      this.vel = this.heading.copy().mult(this.maxSpeed * 0.8);
     }
     this.level = 0;
     this.state = "approach";
+    // Vitesse de départ : jamais plus que ce que permet le prochain virage.
+    if (this.path && this.path.points.length > 1) {
+      this.vel = this.heading.copy().mult(Math.min(this.maxSpeed * 0.8, this.cornerSpeedLimit(this.maxSpeed)));
+    }
     this.waitSteps = 0;
     this.leaderAhead = null;
     this.braking = false;
@@ -159,7 +169,7 @@ class RoadVehicle extends SteeringAgent {
       for (let k = 0; k < prioritaires.length; k++) {
         const c = prioritaires[k];
         // Un piéton n'est gênant que s'il est sur notre voie (marge latérale).
-        const securite = c.isPedestrian ? c.r + this.widthPx / 2 + mPx(0.8) : c.length / 2 + this.length / 2 + ecart;
+        const securite = c.isPedestrian ? c.r + this.widthPx / 2 + mPx(0.4) : c.length / 2 + this.length / 2 + ecart;
         const s2 = securite * securite;
         const q = imminentes[k];
         const touche = pt => (pt.x - c.pos.x) ** 2 + (pt.y - c.pos.y) ** 2 < s2 || (pt.x - q.x) ** 2 + (pt.y - q.y) ** 2 < s2;
@@ -234,7 +244,7 @@ class RoadVehicle extends SteeringAgent {
     let nom;
     if (contrainte && contrainte.libre < distanceObjectif) {
       principal = this.queueForce(contrainte);
-      nom = "leader";
+      nom = "file";
     } else if (suitLeChemin) {
       principal = this.follow(this.path);
       nom = "path";
@@ -247,27 +257,34 @@ class RoadVehicle extends SteeringAgent {
     }
     this.detectDeadlock(nom);
     // Le freinage derrière un véhicule prioritaire passe avant la séparation.
-    const principalEntree = { name: nom, force: principal, weight: nom === "path" ? w.follow : nom === "leader" ? w.leader : w.arrive };
-    if (nom === "leader") entrees.push(principalEntree);
+    const principalEntree = { name: nom, force: principal, weight: nom === "path" ? w.follow : nom === "file" ? w.leader : w.arrive };
+    if (nom === "file") entrees.push(principalEntree);
     if (this.usesSeparation()) entrees.push({ name: "separate", force: this.separationForce(voisins), weight: w.separate });
-    if (nom !== "leader") entrees.push(principalEntree);
+    if (nom !== "file") entrees.push(principalEntree);
     this.setBehavior(nom);
     return entrees;
   }
 
-  // Interblocage (règle de sélection d'action) : deux véhicules arrêtés qui
-  // s'attendent mutuellement depuis plus de deadlockSteps. Le plus ancien
-  // (plus petit id) ignore l'autre pendant ignoreSteps pour se dégager.
-  // Limité au cas mutuel : jamais dans une file ordinaire.
+  // Interblocage (règle de sélection d'action) : des véhicules presque arrêtés
+  // qui s'attendent en cercle depuis plus de deadlockSteps (A attend B, B
+  // attend A ; ou A attend B, B attend C, C attend A). Le plus ancien du
+  // cercle (plus petit id) ignore celui qu'il attend pendant ignoreSteps pour
+  // se dégager. Jamais dans une file ordinaire : la chaîne doit revenir à soi.
   detectDeadlock(nom) {
-    this.blockedSteps = nom === "leader" && this.vel.mag() < 0.05 ? (this.blockedSteps ?? 0) + 1 : 0;
+    this.blockedSteps = nom === "file" && this.vel.mag() < this.config.blockedSpeed ? (this.blockedSteps ?? 0) + 1 : 0;
     const autre = this.leaderAhead;
     if (!autre || this.blockedSteps < this.config.deadlockSteps) return;
-    if (autre.leaderAhead === this && (autre.blockedSteps ?? 0) >= this.config.deadlockSteps && this.id < autre.id) {
-      this.ignoredCar = autre;
-      this.ignoreUntil = this.age + this.config.ignoreSteps;
-      this.blockedSteps = 0;
+    const cercle = [this];
+    let c = autre;
+    while (c && c !== this && !c.isPedestrian && cercle.length < this.config.deadlockChain &&
+      (c.blockedSteps ?? 0) >= this.config.deadlockSteps) {
+      cercle.push(c);
+      c = c.leaderAhead;
     }
+    if (c !== this || cercle.some(v => v.id < this.id)) return;
+    this.ignoredCar = autre;
+    this.ignoreUntil = this.age + this.config.ignoreSteps;
+    this.blockedSteps = 0;
   }
 
   // Un pas : sélection d'action → forces → intégration héritée (une fois).
@@ -287,7 +304,46 @@ class RoadVehicle extends SteeringAgent {
   }
 
   applySpeedLimit() {
-    this.maxSpeed = this.speedFor(this.state === "approach" ? this.config.cruiseSpeed : this.config.insideSpeed);
+    this.maxSpeed = this.speedFor(this.cornerSpeedLimit(this.state === "approach" ? this.config.cruiseSpeed : this.config.insideSpeed));
+  }
+
+  // Ralentir avant un virage serré (règle de conduite, sélection d'action) :
+  // sinon, à 40 km/h, le rayon de virage (≈ v² / maxForce) dépasse la largeur
+  // des rues et la voiture « coupe » sur le trottoir. Vitesse de virage selon
+  // l'angle à prendre ; la vitesse permise croît avec la distance au virage
+  // (courbe de freinage v² = v_virage² + 2 · maxForce · d).
+  cornerSpeedLimit(base) {
+    if (!this.path || !this.followStates().includes(this.state)) return base;
+    const c = this.config;
+    const n = this.path.segmentCount();
+    const portee = (base * base) / (2 * this.maxForce) + mPx(5);
+    let limite = base;
+    // Hors de sa voie (après un virage pris trop large) : on reste lent le
+    // temps d'y revenir, sinon le seek du suivi de chemin accélère au lieu de corriger.
+    const [a, b] = this.path.segment(this.pathIndex % n);
+    const ecartVoie = Math.min(p5.Vector.dist(this.pos, closestPointOnSegment(this.pos, a, b)),
+      this.pathIndex > 0 || this.path.closed ? p5.Vector.dist(this.pos, closestPointOnSegment(this.pos, ...this.path.segment((this.pathIndex - 1 + n) % n))) : Infinity);
+    if (ecartVoie > 2 * this.path.radius) limite = Math.min(limite, c.cornerSpeed * 1.5);
+    // Le segment courant compte aussi : on reste lent tant que la voiture
+    // n'est pas alignée sur sa nouvelle direction. Si elle n'a pas encore
+    // atteint son début (le suivi de chemin anticipe), la distance qui reste compte.
+    let d = Math.max(0, p5.Vector.sub(a, this.pos).dot(this.heading));
+    for (let k = this.pathIndex; k < this.pathIndex + 1 + c.cornerLookSegments && d < portee; k++) {
+      if (!this.path.closed && k >= n) break;
+      const [p, q] = this.path.segment(k % n);
+      const dir = p5.Vector.sub(q, p);
+      if (dir.magSq() < 1e-9) continue;
+      const angle = Math.acos(Math.max(-1, Math.min(1, dir.normalize().dot(this.heading))));
+      const t = Math.max(0, Math.min(1, (angle - c.cornerMinAngle) / (c.cornerFullAngle - c.cornerMinAngle)));
+      const vVirage = base + (Math.min(base, c.cornerSpeed) - base) * t;
+      // On doit être à la vitesse de virage quand le virage commence, c'est-à-dire
+      // quand la position prédite du suivi de chemin (pathPredict) atteint le sommet.
+      limite = Math.min(limite, Math.sqrt(vVirage * vVirage + 2 * this.maxForce * Math.max(0, d - this.pathPredict)));
+      d = k === this.pathIndex ? p5.Vector.dist(this.pos, q) : d + p5.Vector.dist(p, q);
+    }
+    // La limite ne baisse jamais plus vite que maxForce par pas : le freinage
+    // reste dans le budget de force, même si un virage apparaît tard.
+    return Math.max(limite, Math.min(base, this.vel.mag() - this.maxForce));
   }
 
   // Transitions communes : file de la porte, puis passage de la barrière.

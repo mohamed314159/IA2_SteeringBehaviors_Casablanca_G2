@@ -15,20 +15,20 @@ function spotCompatible(spot, carKind) {
 
 // Point d'où le conducteur part à pied depuis cette place : la place elle-même
 // en surface, la sortie de l'ascenseur (porte du bâtiment) pour le garage.
-function walkStart(spot, garage) {
-  if (spot.level === -1 && garage) return garage.building.door;
+function walkStart(spot) {
+  if (spot.level === -1 && spot.lot.garage) return spot.lot.garage.building.door;
   return spot.pos;
 }
 
-function chooseSpot(lots, garage, carKind, door) {
+function chooseSpot(lots, carKind, door) {
   let meilleure = null;
   let record = Infinity;
   for (const lot of lots) {
     for (const s of lot.spots) {
       if (!s.isFree() || !spotCompatible(s, carKind)) continue;
-      let cout = p5.Vector.dist(walkStart(s, garage), door);
+      let cout = p5.Vector.dist(walkStart(s), door);
       // Au garage, on marche aussi de la place jusqu'à l'ascenseur.
-      if (s.level === -1 && garage) cout += p5.Vector.dist(s.pos, garage.elevatorDoor);
+      if (s.level === -1 && s.lot.garage) cout += p5.Vector.dist(s.pos, s.lot.garage.elevatorDoor);
       if (s.kind !== "standard") cout -= SPOT_BONUS_PX;
       if (cout < record) {
         record = cout;
@@ -40,8 +40,8 @@ function chooseSpot(lots, garage, carKind, door) {
 }
 
 // Réserve une place pour la voiture ; null si tout est complet.
-function assignSpot(lots, garage, car) {
-  const place = chooseSpot(lots, garage, car.kind, car.destinationDoor);
+function assignSpot(lots, car) {
+  const place = chooseSpot(lots, car.kind, car.destinationDoor);
   if (!place) return null;
   place.reserve(car);
   return place;

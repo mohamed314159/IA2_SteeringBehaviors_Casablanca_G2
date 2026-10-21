@@ -63,6 +63,19 @@ function drawEmployee(look, r, pose = {}) {
   } else {
     arc(r * 0.05, 0, r * 0.95, r * 0.95, Math.PI * 0.55, Math.PI * 1.45);
   }
+  // casquette (gardiens) : calotte blanche et visière sombre vers l'avant
+  if (tenue.cap) {
+    fill(248);
+    circle(r * 0.02, 0, r * 0.9);
+    fill(30, 40, 70);
+    arc(r * 0.3, 0, r * 0.75, r * 0.85, -Math.PI / 2, Math.PI / 2);
+  }
+  // assis : jambes visibles devant (vue de dessus)
+  if (pose.seated) {
+    fill(tenue.jacket ?? "#2b2f38");
+    rect(r * 0.5, -r * 0.45, r * 0.9, r * 0.35, r * 0.1);
+    rect(r * 0.5, r * 0.1, r * 0.9, r * 0.35, r * 0.1);
+  }
   // café à la main
   if (pose.coffee) {
     fill(255);

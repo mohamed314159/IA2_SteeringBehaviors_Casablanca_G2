@@ -1,12 +1,18 @@
-// Panneau de réglages (repris de 7-Boids/panneau.js) : un bouton ⚙ l'ouvre
-// ou le ferme (touche P aussi, Échap pour fermer). Créé une seule fois dans
-// setup(). surChangement(cle, valeur) est appelé pendant le glissement.
+// Panneau de réglages (repris de 7-Boids/panneau.js) : un petit bouton ⚙
+// l'ouvre ou le ferme (touche P aussi, Échap pour fermer). Créé une seule fois
+// dans setup(). surChangement(cle, valeur) est appelé pendant le glissement.
+// En tête du panneau, une zone d'informations (places libres, statistiques)
+// que le sketch remplit avec afficherInfos(html). Dans chaque groupe de
+// comportement (options.comportements), une ligne « Voir sur la carte »
+// indique combien d'entités l'exécutent en ce moment (majComptes) et appelle
+// options.surLocaliser(groupe) au clic.
 
-function creerPanneauReglages(reglages, definitions, surChangement) {
+function creerPanneauReglages(reglages, definitions, surChangement, options = {}) {
   let ouvert = false;
 
-  const bouton = createButton("⚙ Réglages");
-  bouton.class("bouton-reglages");
+  const bouton = createButton("⚙");
+  bouton.class("icone");
+  if (options.parentBouton) bouton.parent(options.parentBouton);
   bouton.attribute("type", "button");
   bouton.attribute("aria-label", "Réglages par comportement (touche P)");
   bouton.attribute("title", "Réglages par comportement (touche P)");
@@ -22,12 +28,16 @@ function creerPanneauReglages(reglages, definitions, surChangement) {
   const entete = createDiv();
   entete.class("entete");
   entete.parent(panneau);
-  createElement("h2", "Réglages par comportement").parent(entete);
+  createElement("h2", "Réglages").parent(entete);
   const boutonFermer = createButton("✕");
   boutonFermer.attribute("type", "button");
   boutonFermer.attribute("aria-label", "Fermer les réglages");
   boutonFermer.class("fermer");
   boutonFermer.parent(entete);
+
+  const infos = createDiv();
+  infos.class("infos");
+  infos.parent(panneau);
 
   const boutonDefaut = createButton("Valeurs par défaut");
   boutonDefaut.attribute("type", "button");
@@ -36,12 +46,17 @@ function creerPanneauReglages(reglages, definitions, surChangement) {
 
   const curseurs = {};
   const groupes = {};
+  const localisateurs = {};
   for (const def of definitions) {
     if (groupes[def.groupe] === undefined) {
       const fieldset = createElement("fieldset");
       fieldset.parent(panneau);
       createElement("legend", def.groupe).parent(fieldset);
       groupes[def.groupe] = fieldset;
+      const cleGroupe = def.cle.split(".")[0];
+      if (options.comportements && options.comportements[cleGroupe]) {
+        localisateurs[cleGroupe] = creerLigneLocaliser(cleGroupe, options.comportements[cleGroupe].nom, fieldset, options.surLocaliser);
+      }
     }
     curseurs[def.cle] = creerLigneCurseur(def, reglages, groupes[def.groupe], surChangement);
   }
@@ -84,13 +99,50 @@ function creerPanneauReglages(reglages, definitions, surChangement) {
     basculer,
     estOuvert: () => ouvert,
     curseurs,
+    afficherInfos(html) {
+      infos.html(html);
+    },
+    // Nombre d'entités par comportement : texte et bouton (désactivé à 0).
+    majComptes(comptes) {
+      for (const [cle, l] of Object.entries(localisateurs)) {
+        const n = comptes[cle] ?? 0;
+        const texte = n === 0 ? "aucun en ce moment" : n === 1 ? "1 en ce moment" : `${n} en ce moment`;
+        if (l.compte.html() !== texte) l.compte.html(texte);
+        l.bouton.elt.disabled = n === 0;
+      }
+    },
     afficherValeur,
     retirer() {
       bouton.elt.removeEventListener("click", basculer);
       boutonFermer.elt.removeEventListener("click", fermer);
       boutonDefaut.elt.removeEventListener("click", remettreParDefaut);
+      for (const l of Object.values(localisateurs)) l.retirer();
       bouton.remove();
       panneau.remove();
+    }
+  };
+}
+
+// Ligne « Voir sur la carte » d'un comportement : compteur et bouton.
+function creerLigneLocaliser(cleGroupe, nom, parent, surLocaliser) {
+  const ligne = createDiv();
+  ligne.class("localiser");
+  ligne.parent(parent);
+  const compte = createSpan("…");
+  compte.class("compte");
+  compte.parent(ligne);
+  const bouton = createButton("📍 Voir sur la carte");
+  bouton.attribute("type", "button");
+  bouton.attribute("aria-label", `Montrer sur la carte une entité qui fait ${nom} (cliquer encore : la suivante)`);
+  bouton.attribute("title", `Montrer une entité qui fait ${nom} ; cliquer encore pour la suivante`);
+  bouton.parent(ligne);
+  const auClic = () => surLocaliser && surLocaliser(cleGroupe);
+  bouton.elt.addEventListener("click", auClic);
+  return {
+    compte,
+    bouton,
+    retirer() {
+      bouton.elt.removeEventListener("click", auClic);
     }
   };
 }

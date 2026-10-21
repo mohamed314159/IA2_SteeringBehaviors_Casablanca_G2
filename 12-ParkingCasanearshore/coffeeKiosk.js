@@ -1,4 +1,4 @@
-// Kiosque à café de l'esplanade : entité immobile du monde (un Vehicle dont
+// Stand de café, juste à côté de l'entrée d'un bâtiment : entité immobile du monde (un Vehicle dont
 // on n'appelle pas update()). Obstacle pour les piétons et destination de
 // ceux qui vont chercher un café (point de comptoir).
 class CoffeeKiosk extends Vehicle {

@@ -59,7 +59,7 @@ export function creerAlea(graine = 1) {
 const FONCTIONS_DESSIN = ["push", "pop", "translate", "scale", "rotate", "fill", "noFill", "stroke",
   "noStroke", "strokeWeight", "rect", "circle", "ellipse", "line", "arc", "text", "textSize",
   "textAlign", "textStyle", "image", "imageMode", "triangle", "point", "beginShape", "endShape",
-  "vertex", "quad", "rectMode", "strokeCap", "strokeJoin", "background", "describe"];
+  "vertex", "quad", "rectMode", "strokeCap", "strokeJoin", "background", "describe", "bezier"];
 
 // p5.map(value, start1, stop1, start2, stop2, withinBounds)
 function mapP5(n, a1, b1, a2, b2, borne = false) {

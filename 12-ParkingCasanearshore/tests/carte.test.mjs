@@ -2,11 +2,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { chargerExemple, Vector } from "./adaptateur-p5.mjs";
+import { FICHIERS_SIMULATION } from "./fichiers.mjs";
 
-const FICHIERS = ["vehicle.js", "geometry.js", "path.js", "mapProjection.js", "data/casanearshore.js",
-  "roadNetwork.js", "steeringAgent.js", "building.js", "campus.js", "camera.js"];
-const NOMS = ["CASANEARSHORE", "RoadNetwork", "Building", "Vehicle", "Camera", "createCampus", "planCarRoute",
-  "createProjection", "projectLatLon", "unprojectXY", "offsetPolylineRight", "CAMPUS_CONFIG", "MinHeap"];
+const FICHIERS = [...FICHIERS_SIMULATION, "camera.js"];
+const NOMS = ["CASANEARSHORE", "CASANEARSHORE_REEL", "RoadNetwork", "Building", "Vehicle", "Camera", "createCampus", "planCarRoute",
+  "createProjection", "projectLatLon", "unprojectXY", "offsetPolylineRight", "CAMPUS_CONFIG", "MinHeap", "polygonCentroid"];
 
 let cache = null;
 function monde() {
@@ -31,10 +31,12 @@ test("projection : aller-retour exact et échelle respectée à 1 % près", () =
   assert.ok(b.y < a.y);
 });
 
-test("données : parc, 29 bâtiments, parkings, Busway et portes réelles", () => {
-  const { CASANEARSHORE: D, campus } = monde();
+test("données : parc, 29 bâtiments OSM + relevés, parkings, Busway et portes réelles", () => {
+  const { CASANEARSHORE: D, CASANEARSHORE_REEL: R, campus } = monde();
   assert.ok(D.source.includes("OpenStreetMap"));
-  assert.equal(campus.buildings.length, 29);
+  assert.equal(D.buildings.filter(b => b.inSite).length, 29);
+  // + bâtiments absents d'OSM relevés sur l'imagerie, + le restaurant
+  assert.equal(campus.buildings.length, 29 + R.ajouts.length + 1);
   assert.ok(campus.parkings.length >= 3);
   assert.ok(D.busway.length > 0);
   assert.ok(D.stops.some(s => s.name === "Casa Nearshore"));
@@ -54,8 +56,32 @@ test("bâtiments : Vehicle immobiles, obstacles polygonaux, porte à l'extérieu
     const surface = b.closestPoint(b.door);
     assert.ok(Math.abs(b.door.dist(surface) - 6) < 0.5, `recul de 3 m pour ${b.name}`);
   }
+});
+
+test("plan réel : Shores 1 à 28 nommés, UIR presque au milieu, restaurant ; chaque nom écrit une fois", () => {
+  const { campus, polygonCentroid } = monde();
   const noms = new Set(campus.buildings.map(b => b.name));
-  assert.equal(noms.size + campus.buildings.filter(b => b.name === "Capgemini").length - (noms.has("Capgemini") ? 1 : 0), 29);
+  for (const n of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 26, 27, 28]) {
+    assert.ok(noms.has(`Shore ${n}`), `Shore ${n}`);
+  }
+  assert.ok(noms.has("UIR (Shore 13)") && noms.has("Ibis") && noms.has("Shore 25 (chantier)"));
+  // L'UIR est près du centre du parc (moins de 20 % de la diagonale).
+  const xs = campus.site.map(p => p.x);
+  const ys = campus.site.map(p => p.y);
+  const diagonale = Math.hypot(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys));
+  const uir = campus.buildings.find(b => b.name === "UIR (Shore 13)");
+  assert.ok(uir.center.dist(polygonCentroid(campus.site)) < 0.2 * diagonale);
+  assert.equal(uir.usage, "universite");
+  assert.equal(campus.buildings.filter(b => b.usage === "restaurant").length, 1);
+  // Lieux de travail : ni le chantier ni le restaurant.
+  assert.ok(campus.workplaces.every(b => b.usage !== "chantier" && b.usage !== "restaurant"));
+  assert.equal(campus.workplaces.length, campus.buildings.length - 2);
+  // Un nom porté par plusieurs contours (Shore 8, Shore 9…) n'est écrit qu'une fois.
+  for (const nom of noms) assert.equal(campus.buildings.filter(b => b.name === nom && !b.labelHidden).length, 1, nom);
+  // Toitures : solaires d'après l'imagerie, patios pour Shore 12, courbe pour Shore 2.
+  assert.equal(campus.buildings.find(b => b.name === "Shore 12").roof, "patios");
+  assert.equal(campus.buildings.find(b => b.name === "Shore 2").roof, "courbe");
+  assert.ok(campus.buildings.filter(b => b.roof === "solaire").length >= 8);
 });
 
 test("réseau : la porte nord est une entrée à sens unique vers le parc", () => {
@@ -106,6 +132,46 @@ test("réseau : Dijkstra trouve le plus court chemin et respecte le sens unique"
   assert.deepEqual([...net.shortestPath(3, 5)], [3, 5]);
   assert.equal(net.shortestPath(5, 3), null, "sens interdit");
   assert.deepEqual([...net.shortestPath(1, 3, n => n.id !== 2)], [1, 4, 3], "sommet interdit contourné");
+});
+
+test("réseau : plus grande composante connexe ; le réseau piéton relie portes, station et bâtiments", () => {
+  const { RoadNetwork, campus } = monde();
+  const net = new RoadNetwork([
+    { type: "residential", oneway: false, nodes: [1, 2, 3], points: [[0, 0], [10, 0], [20, 0]] },
+    { type: "service", oneway: true, nodes: [3, 4], points: [[20, 0], [30, 0]] },
+    { type: "footway", oneway: false, nodes: [7, 8], points: [[100, 0], [110, 0]] }
+  ]);
+  assert.deepEqual([...net.largestComponent()].sort(), [1, 2, 3, 4], "le sens unique compte dans les deux sens pour la connexité");
+  // Le réseau piéton n'emprunte pas la voie rapide.
+  for (const n of campus.pedestrianNetwork.nodes.values()) {
+    assert.ok(!n.types.has("trunk") || [...n.types].some(t => t !== "trunk" && t !== "trunk_link"), "pas de sommet seulement sur la voie rapide");
+  }
+  assert.ok(campus.walkableNodes.size > 0.9 * campus.pedestrianNetwork.nodes.size);
+});
+
+test("bâtiments relevés sur l'imagerie : aucune route ni chemin OSM ne les traverse (seules les rampes y aboutissent)", () => {
+  const { campus, CASANEARSHORE_REEL: R } = monde();
+  const releves = campus.buildings.filter(b => String(b.id).startsWith("ajout-"));
+  assert.equal(releves.length, R.ajouts.length);
+  const voies = [...campus.data.roads, ...campus.data.footways.map(f => ({ ...f, type: "footway" }))];
+  for (const b of releves) {
+    let dedans = 0;
+    let chemins = 0;
+    for (const r of voies) {
+      for (let i = 0; i + 1 < r.points.length; i++) {
+        const [ax, ay] = r.points[i];
+        const [bx, by] = r.points[i + 1];
+        const l = Math.hypot(bx - ax, by - ay);
+        for (let t = 0; t <= l; t += 2) {
+          if (!b.contains(new Vector(ax + ((bx - ax) * t) / l, ay + ((by - ay) * t) / l))) continue;
+          dedans++;
+          if (r.type === "footway") chemins++;
+        }
+      }
+    }
+    assert.equal(chemins, 0, `aucun chemin piéton dans ${b.name}`);
+    assert.ok(dedans <= 5, `${b.name} : ${dedans} m de route à l'intérieur (au plus le bout d'une rampe)`);
+  }
 });
 
 test("offsetPolylineRight : décalage à droite du sens de marche", () => {

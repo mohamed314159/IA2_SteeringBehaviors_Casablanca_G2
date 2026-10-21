@@ -4,8 +4,8 @@
 
 // Comportements mis en surbrillance avec les touches 1 à 8.
 const COMPORTEMENTS_TOUCHES = {
-  1: { nom: "Seek", test: e => e.behavior === "seek" },
-  2: { nom: "Pursue / Evade", test: e => e.behavior === "pursue" || (e.evadeState && e.evadeState.active) },
+  1: { nom: "Seek", test: e => e.behavior === "seek" || e.behavior === "neuro" },
+  2: { nom: "Pursue / Evade", test: e => e.behavior === "pursue" || e.behavior === "evade" || Boolean(e.evadeState && e.evadeState.active) },
   3: { nom: "Arrive", test: e => e.behavior === "arrive" },
   4: { nom: "Wander", test: e => e.behavior === "wander" },
   5: { nom: "Path following", test: e => e.behavior === "path" },
@@ -16,7 +16,8 @@ const COMPORTEMENTS_TOUCHES = {
 
 const COULEURS_DEBUG = {
   seek: "#ff7043", pursue: "#ab47bc", arrive: "#29b6f6", wander: "#66bb6a",
-  path: "#ffee58", boids: "#26a69a", leader: "#ec407a", idle: "#9e9e9e"
+  path: "#ffee58", boids: "#26a69a", leader: "#ec407a", idle: "#9e9e9e",
+  file: "#f48fb1", evade: "#ff7043", neuro: "#ffa726"
 };
 
 function drawDebugOverlay(entites, zoom) {
@@ -68,7 +69,8 @@ function drawDebugOverlay(entites, zoom) {
       stroke(236, 64, 122, 90);
       circle(info.leader.devant.x, info.leader.devant.y, e.leaderSightRadius * 2);
     }
-    if (e.behavior === "leader" && info.queueTarget) {
+    // File d'attente des voitures (A3) : point visé derrière le véhicule prioritaire.
+    if (e.behavior === "file" && info.queueTarget) {
       stroke(236, 64, 122);
       line(e.pos.x, e.pos.y, info.queueTarget.x, info.queueTarget.y);
     }

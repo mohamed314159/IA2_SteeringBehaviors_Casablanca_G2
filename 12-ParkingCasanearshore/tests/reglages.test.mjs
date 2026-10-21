@@ -112,4 +112,18 @@ test("surbrillance : les touches 1 à 8 couvrent les 8 comportements", () => {
   a.setBehavior("boids");
   assert.equal(COMPORTEMENTS_TOUCHES[7].test(a), true);
   assert.equal(COMPORTEMENTS_TOUCHES[3].test(a), false);
+  // « leader » : convoi G4S et formation ; la file des voitures (« file ») n'en fait pas partie.
+  assert.equal(COMPORTEMENTS_TOUCHES[8].test({ behavior: "leader" }), true);
+  assert.equal(COMPORTEMENTS_TOUCHES[8].test({ behavior: "file" }), false);
+  // Les oiseaux (« neuro ») sont des seek pilotés par un réseau ; le papillon fuit (« evade »).
+  assert.equal(COMPORTEMENTS_TOUCHES[1].test({ behavior: "neuro" }), true);
+  assert.equal(COMPORTEMENTS_TOUCHES[2].test({ behavior: "evade" }), true);
+});
+
+test("réglages : la file des voitures dépend du groupe leader, les oiseaux du groupe seek", () => {
+  const { SteeringAgent, DEFINITIONS_REGLAGES } = env();
+  assert.equal(SteeringAgent.GROUPS.file, "leader");
+  assert.equal(SteeringAgent.GROUPS.neuro, "seek");
+  assert.ok(DEFINITIONS_REGLAGES.some(d => d.groupe.startsWith("2. Pursue") && d.groupe.includes("chats")));
+  assert.ok(!DEFINITIONS_REGLAGES.some(d => d.groupe.includes("badge")), "le badge oublié n'existe plus");
 });

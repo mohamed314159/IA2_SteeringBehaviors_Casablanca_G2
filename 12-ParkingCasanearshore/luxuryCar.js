@@ -74,7 +74,7 @@ class LuxuryCar extends RoadVehicle {
     else if (this.state === "parking") base = c.parkingSpeed;
     else if (this.state === "ramp") base = c.insideSpeed * ctx.garage.rampSpeedFactor();
     else if (this.state === "garageDrive") base = c.parkingSpeed * 1.5;
-    this.maxSpeed = this.speedFor(base);
+    this.maxSpeed = this.speedFor(this.cornerSpeedLimit(base));
   }
 
   // ---------- Transitions d'état (règles explicites) ----------
@@ -123,7 +123,7 @@ class LuxuryCar extends RoadVehicle {
     this.spot = ctx.assign(this);
     if (!this.spot) return false; // complet : la voiture attend devant la barrière
     const route = ctx.plan(this, this.spot);
-    this.path = new Path([this.pos.copy(), ...route.inside.map(p => createVector(p.x, p.y)), ...route.tail], mPx(1.5));
+    this.path = new Path([this.pos.copy(), ...route.inside.map(p => createVector(p.x, p.y)), ...route.tail], mPx(this.config.laneToleranceM));
     return true;
   }
 

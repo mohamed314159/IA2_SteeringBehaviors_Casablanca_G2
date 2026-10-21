@@ -1,17 +1,16 @@
-// Étape 9 : employés (flânerie, discussions, café, groupes, formation, badge,
-// retardataire, évasion, évitement, entrée dans les bâtiments).
+// Étape 9 : employés (flânerie, discussions, café, bancs, groupes, formation,
+// retardataire, évasion, évitement, trottoirs, entrée dans les bâtiments) et gardiens.
 import assert from "node:assert/strict";
 import test from "node:test";
 import { chargerExemple, Vector } from "./adaptateur-p5.mjs";
+import { FICHIERS_SIMULATION } from "./fichiers.mjs";
 
-const FICHIERS = ["vehicle.js", "random.js", "simUnits.js", "geometry.js", "path.js", "collisions.js", "mapProjection.js",
-  "data/casanearshore.js", "roadNetwork.js", "steeringAgent.js", "building.js", "campus.js", "parkingSpot.js",
-  "parkingLot.js", "gate.js", "pillar.js", "garage.js", "parkingAllocator.js", "parkingWorld.js", "carModels.js",
-  "roadVehicle.js", "luxuryCar.js", "shuttle.js", "tramCar.js", "tram.js", "traffic.js", "transit.js",
-  "coffeeKiosk.js", "bench.js", "planter.js", "esplanade.js", "outfits.js", "employee.js", "crowd.js"];
+const FICHIERS = FICHIERS_SIMULATION;
 const NOMS = ["CASANEARSHORE", "createCampus", "createParkingWorld", "createEsplanades", "TrafficManager", "Crowd",
-  "Employee", "SteeringAgent", "Vehicle", "CoffeeKiosk", "Bench", "Planter", "SpatialGrid", "WalkingGroup",
-  "OUTFITS", "createRng", "EMPLOYEE_CONFIG", "kmh", "mPx", "Path"];
+  "Employee", "SteeringAgent", "Vehicle", "CoffeeKiosk", "Bench", "AssemblyPoint", "SpatialGrid", "WalkingGroup",
+  "OUTFITS", "createRng", "EMPLOYEE_CONFIG", "kmh", "mPx", "Path", "planWalk", "sidewalkOffset", "offsetPolylineVariable",
+  "ROAD_WIDTH_M", "SIDEWALK_GAP_M", "Simulation", "SCHEDULE_CONFIG", "SecurityGuard", "GUARD_POSTS", "stepsFor",
+  "closestPointOnSegment", "pointInPolygon"];
 
 let base = null;
 function monde(graine = 9) {
@@ -37,9 +36,24 @@ function pas(m, n, chaque = () => {}) {
   return -1;
 }
 
-test("décor : kiosques, bancs et jardinières sont des Vehicle immobiles, hors des bâtiments", () => {
+test("décor : stands de café juste à côté des bâtiments, bancs, points de rassemblement ; Vehicle immobiles", () => {
   const m = monde();
-  assert.equal(m.decor.esplanades.length, 4);
+  assert.ok(m.decor.esplanades.length >= 8 && m.decor.esplanades.length <= 12, `${m.decor.esplanades.length} stands`);
+  for (const z of m.decor.esplanades) {
+    // le stand est à moins de 12 m de la façade de son bâtiment
+    assert.ok(z.building.closestPoint(z.kiosk.pos).dist(z.kiosk.pos) < m.mPx(12), z.kiosk.name);
+    assert.notEqual(z.building.usage, "chantier");
+  }
+  assert.ok(m.decor.obstacles.some(o => o instanceof m.Bench));
+  assert.ok(m.decor.assemblyPoints.length >= 4);
+  for (const a of m.decor.assemblyPoints) {
+    assert.ok(a instanceof m.AssemblyPoint && a instanceof m.Vehicle);
+    assert.ok(m.campus.insideSite({ x: a.pos.x, y: a.pos.y }));
+    assert.ok(!m.campus.buildings.some(b => b.contains(a.pos)), "hors des bâtiments");
+    assert.ok(!m.world.lots.some(l => m.pointInPolygon(a.pos, l.points)), "hors des parkings");
+  }
+  // un parvis pavé devant chaque bâtiment (sauf le chantier)
+  assert.equal(m.decor.parvis.length, m.campus.buildings.filter(b => b.usage !== "chantier").length);
   for (const o of m.decor.obstacles) {
     assert.ok(o instanceof m.Vehicle);
     assert.equal(o.maxSpeed, 0);
@@ -90,6 +104,18 @@ test("avant 8h55 : discussions en cercle, flâneurs confinés à leur esplanade"
   assert.equal(horsZone, 0, "le confinement ramène les flâneurs");
   // les membres d'une discussion sont arrivés à leur place
   for (const c of m.foule.chats) for (const e of c.members) assert.ok(e.pos.dist(e.slot) < m.mPx(1.5));
+});
+
+test("avant 8h55 : discussions et flâneurs sur les espaces piétons, jamais au milieu d'une chaussée", () => {
+  const m = monde();
+  m.foule.spawnPresent(80);
+  const axes = m.campus.data.roads.filter(r => !["footway", "pedestrian", "path", "steps"].includes(r.type))
+    .flatMap(r => r.points.slice(1).map((p, i) => [new Vector(...r.points[i]), new Vector(...p)]));
+  const surRoute = p => axes.some(([a, b]) => m.closestPointOnSegment(p, a, b).dist(p) < m.mPx(4));
+  for (const c of m.foule.chats) assert.equal(surRoute(c.center), false, "cercle de discussion sur une route");
+  const auCentre = e => e.zone && e.pos.dist(e.zone.center) < 1e-9;
+  const mal = m.foule.employees.filter(e => e.state === "wander" && !auCentre(e) && surRoute(e.pos));
+  assert.equal(mal.length, 0, `${mal.length} flâneurs placés sur une chaussée`);
 });
 
 test("café : arrive au comptoir, attend, repart avec un café", () => {
@@ -157,26 +183,41 @@ test("formation : les suiveurs restent derrière le guide", () => {
   assert.equal(devant, 0, "aucun suiveur ne passe devant le guide");
 });
 
-test("badge oublié : le conducteur poursuit (pursue) son collègue puis lui remet le badge", () => {
+test("banc : un flâneur s'assoit (arrive sur la place), reste assis, repart flâner ; place libérée", () => {
   const m = monde();
-  m.foule.config = { ...m.foule.config, badgeShare: 1 };
-  const voiture = m.trafic.spawnCar({ entry: m.campus.entries[0] });
-  voiture.state = "parked";
-  voiture.level = 0;
-  voiture.vel.set(0, 0);
-  const conducteur = m.foule.spawnDriver(voiture);
-  const passager = m.foule.employees.find(e => e !== conducteur);
-  assert.equal(conducteur.state, "pursue");
-  assert.equal(conducteur.badgeFor, passager);
-  let pointPredit = false;
-  const fini = pas(m, 3000, () => {
-    if (conducteur.behavior === "pursue" && conducteur.debugInfo.pursuePoint) pointPredit = true;
-    return conducteur.state !== "pursue";
+  m.foule.spawnPresent(6);
+  const e = m.foule.employees.find(x => x.state === "wander") ?? m.foule.employees[0];
+  const banc = m.decor.obstacles.find(o => o instanceof m.Bench);
+  const place = banc.freeSeat();
+  e.sitOn(banc, place, 50);
+  assert.equal(place.occupant, e, "place réservée");
+  assert.notEqual(banc.freeSeat(), place);
+  let assis = -1;
+  let comportement = null;
+  const fini = pas(m, 3000, i => {
+    if (!e.seated && e.state === "sit") comportement = e.behavior;
+    if (e.seated && assis < 0) assis = i;
+    return assis >= 0 && e.state === "wander";
   });
-  assert.ok(fini >= 0);
-  assert.ok(pointPredit, "la poursuite vise un point prédit");
-  assert.equal(passager.waitingForBadge, false);
-  assert.ok(conducteur.pos.dist(passager.pos) <= m.mPx(1.5) + passager.maxSpeed + conducteur.maxSpeed);
+  assert.equal(comportement, "arrive", "il arrive sur sa place");
+  assert.ok(assis >= 0, "il s'assoit");
+  assert.ok(fini - assis >= 49, "il reste assis le temps prévu");
+  assert.equal(place.occupant, null, "place libérée");
+});
+
+test("8h55 : un employé assis se lève, libère sa place et va travailler", () => {
+  const m = monde();
+  m.foule.spawnPresent(4);
+  const e = m.foule.employees[0];
+  const banc = m.decor.obstacles.find(o => o instanceof m.Bench);
+  const place = banc.freeSeat();
+  e.sitOn(banc, place, 10000);
+  pas(m, 300, () => e.seated);
+  assert.ok(e.seated);
+  m.foule.goToWork();
+  pas(m, 80);
+  assert.notEqual(e.state, "sit");
+  assert.equal(place.occupant, null);
 });
 
 test("retardataire : seek (pleine vitesse, sans freiner) jusqu'à 2 m de la porte", () => {
@@ -185,6 +226,7 @@ test("retardataire : seek (pleine vitesse, sans freiner) jusqu'à 2 m de la port
   const depart = b.door.copy().add(m.mPx(25), 0);
   const e = m.foule.spawnLate(depart, b);
   assert.equal(e.state, "run");
+  assert.ok(e.path && e.path.points.length >= 2, "itinéraire piéton calculé");
   let vMin = Infinity;
   pas(m, 400, () => {
     if (e.state === "run" && e.pos.dist(e.target) > m.mPx(6) && e.age > 40) vMin = Math.min(vMin, e.vel.mag());
@@ -192,6 +234,30 @@ test("retardataire : seek (pleine vitesse, sans freiner) jusqu'à 2 m de la port
     return e.state !== "run";
   });
   assert.ok(vMin > e.config.runSpeed * 0.7, `vitesse maintenue ${vMin}`);
+});
+
+test("retardataire loin de sa porte : seek point par point sur son itinéraire, jamais bloqué contre un bâtiment", () => {
+  const m = monde();
+  // De la porte nord jusqu'au lieu de travail le plus éloigné (plusieurs centaines de mètres).
+  const nord = m.world.gates.nord;
+  const depart = new Vector(-nord.approach.y, nord.approach.x).mult(m.mPx(5)).add(nord.pos);
+  const b = m.campus.workplaces.reduce((x, y) => (y.door.dist(depart) > x.door.dist(depart) ? y : x));
+  assert.ok(b.door.dist(depart) > m.mPx(300));
+  const e = m.foule.spawnLate(depart, b);
+  let lent = 0;
+  let lentMax = 0;
+  const cibles = new Set();
+  const fini = pas(m, 4000, () => {
+    if (e.state === "run") {
+      cibles.add(e.waypoint);
+      lent = e.vel.mag() < 0.2 ? lent + 1 : 0;
+      lentMax = Math.max(lentMax, lent);
+    }
+    return e.state === "gone";
+  });
+  assert.ok(fini > 0, "il entre dans son bâtiment");
+  assert.ok(cibles.size > 2, "il vise successivement plusieurs points de son itinéraire");
+  assert.ok(lentMax < m.stepsFor(3), `jamais arrêté plus de 3 s (${lentMax} pas)`);
 });
 
 test("évasion : un piéton s'écarte d'une voiture qui arrive, jusqu'à la distance de sortie", () => {
@@ -227,9 +293,8 @@ test("évitement : un piéton qui marche ne traverse jamais un bâtiment", () =>
 
 test("conducteur au garage : arrive à l'ascenseur puis disparaît", () => {
   const m = monde();
-  m.foule.config = { ...m.foule.config, badgeShare: 0 };
   const voiture = m.trafic.spawnCar({ entry: m.campus.entries[0] });
-  const place = m.world.garage.lot.spots[10];
+  const place = m.world.garages[0].lot.spots[10];
   voiture.spot = place;
   voiture.level = -1;
   voiture.pos = place.pos.copy();
@@ -237,7 +302,7 @@ test("conducteur au garage : arrive à l'ascenseur puis disparaît", () => {
   voiture.state = "parked";
   const e = m.foule.spawnDriver(voiture);
   assert.equal(e.level, -1);
-  assert.ok(e.target.dist(m.world.garage.elevatorDoor) < 1e-9);
+  assert.ok(e.target.dist(m.world.garages[0].elevatorDoor) < 1e-9);
   const fini = pas(m, 3000, () => e.state === "gone");
   assert.ok(fini > 0);
   assert.equal(m.foule.enteredBy.garage, 1);
@@ -254,4 +319,128 @@ test("les voitures cèdent le passage à un piéton sur leur voie", () => {
     distMin = Math.min(distMin, voiture.pos.dist(p.pos));
   });
   assert.ok(distMin > voiture.length / 2, `la voiture s'arrête avant le piéton (${distMin})`);
+});
+
+test("trottoirs : décalage par tronçon (chaussée + 1,6 m), nul sur un chemin piéton", () => {
+  const m = monde();
+  const net = m.campus.pedestrianNetwork;
+  let route = null;
+  let chemin = null;
+  for (const n of net.nodes.values()) {
+    for (const e of n.edges) {
+      if (!route && e.type === "service") route = [n.id, e.to, e.type];
+      if (!chemin && e.type === "footway") chemin = [n.id, e.to];
+    }
+  }
+  assert.ok(route && chemin);
+  assert.equal(m.sidewalkOffset(net, route[0], route[1]), m.mPx(m.ROAD_WIDTH_M.service / 2 + m.SIDEWALK_GAP_M));
+  assert.equal(m.sidewalkOffset(net, chemin[0], chemin[1]), 0);
+  // décalage variable : à droite du sens de marche, moyenne aux sommets
+  const pts = m.offsetPolylineVariable([{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 200, y: 0 }], [10, 0]);
+  assert.deepEqual(pts.map(p => [p.x, p.y]), [[0, 10], [100, 5], [200, 0]]);
+});
+
+// Une chaussée peut être traversée (en marchant à peu près en travers) ; le
+// long d'une route, on reste sur le trottoir. Les quelques mètres « le long »
+// restants sont aux carrefours denses et aux allées parallèles des rampes de garage.
+test("trottoirs : à pied, on traverse les chaussées mais on ne les longe presque jamais ; jamais la voie rapide", () => {
+  const m = monde();
+  const axes = [];
+  for (const r of m.campus.data.roads) {
+    for (let i = 0; i + 1 < r.points.length; i++) axes.push({ a: new Vector(...r.points[i]), b: new Vector(...r.points[i + 1]), demi: m.mPx((m.ROAD_WIDTH_M[r.type] ?? 5) / 2), type: r.type });
+  }
+  const chaussee = p => axes.find(s => m.closestPointOnSegment(p, s.a, s.b).dist(p) < s.demi - m.mPx(0.3));
+  let dessus = 0;
+  let leLong = 0;
+  let total = 0;
+  const types = new Set();
+  const lieux = m.campus.workplaces;
+  for (let k = 0; k < 12; k++) {
+    const de = lieux[k % lieux.length].door;
+    const a = lieux[(k * 5 + 3) % lieux.length].door;
+    const chemin = [de, ...m.planWalk(m.campus, de, a)];
+    // longueur du trajet sur une chaussée, échantillonnée tous les mètres
+    for (let i = 0; i + 1 < chemin.length; i++) {
+      const l = chemin[i].dist(chemin[i + 1]);
+      const dir = chemin[i + 1].copy().sub(chemin[i]).normalize();
+      for (let s = 0; s < l; s += m.mPx(1)) {
+        const p = chemin[i].copy().add(chemin[i + 1].copy().sub(chemin[i]).mult(s / l));
+        total++;
+        const c = chaussee(p);
+        if (c) {
+          dessus++;
+          types.add(c.type);
+          // à moins de 45° de l'axe de la route : on la longe
+          if (Math.abs(c.b.copy().sub(c.a).normalize().dot(dir)) > 0.7) leLong++;
+        }
+      }
+    }
+  }
+  assert.ok(total > 1000, `${total} m de trajets`);
+  assert.ok(dessus / total < 0.15, `${dessus} m sur ${total} m sur une chaussée (traversées comprises)`);
+  assert.ok(leLong / total < 0.08, `${leLong} m sur ${total} m le long d'une chaussée`);
+  assert.ok(!types.has("trunk") && !types.has("trunk_link"), "jamais le long de la voie rapide");
+});
+
+test("itinéraires à pied : depuis la station et les stands, un vrai itinéraire vers chaque bâtiment, sans traverser de bâtiment", () => {
+  const m = monde();
+  const d = m.campus.data;
+  const station = d.stops.filter(x => x.name === "Casa Nearshore").map(x => new Vector(x.point[0], x.point[1]));
+  const departs = [...station, ...m.decor.esplanades.map(z => z.kiosk.counter)];
+  let traversees = 0;
+  for (const de of departs) {
+    for (const b of m.campus.workplaces) {
+      const chemin = [de, ...m.planWalk(m.campus, de, b.door)];
+      assert.ok(chemin.length > 2, "jamais une simple ligne droite");
+      for (let i = 0; i + 1 < chemin.length; i++) {
+        const l = chemin[i].dist(chemin[i + 1]);
+        for (let t = 0; t <= l; t += m.mPx(1)) {
+          const p = chemin[i].copy().add(chemin[i + 1].copy().sub(chemin[i]).mult(t / l));
+          if (m.campus.buildings.some(x => x !== b && x.contains(p))) traversees++;
+        }
+      }
+    }
+  }
+  assert.equal(traversees, 0, `${traversees} m d'itinéraire dans un bâtiment`);
+});
+
+test("gardiens : uniforme blanc, postés aux portes réelles, ronde (path following) puis retour au poste (arrive)", () => {
+  const env = chargerExemple(FICHIERS, { noms: NOMS, graine: 4 });
+  const sim = new env.Simulation(env.CASANEARSHORE, 4, { schedule: { ...env.SCHEDULE_CONFIG, cars: 0 }, present: 0 });
+  assert.equal(sim.guards.length, env.GUARD_POSTS.reduce((t, p) => t + p.count, 0));
+  const net = sim.campus.network;
+  for (const g of sim.guards) {
+    assert.ok(g instanceof env.SecurityGuard && g instanceof env.SteeringAgent);
+    assert.equal(g.look.outfit.jacket, "#f5f5f2", "veste blanche");
+    assert.equal(g.look.outfit.shirt, "#ffffff", "chemise blanche");
+    const porte = env.GUARD_POSTS.map(p => net.nodes.get(p.osmId)).reduce((m, n) => Math.min(m, Math.hypot(n.x - g.post.x, n.y - g.post.y)), Infinity);
+    assert.ok(porte < env.mPx(10), "posté à une porte réelle");
+  }
+  const g = sim.guards[0];
+  g.timer = 1; // part en ronde au prochain pas
+  const etats = [];
+  const comportements = new Set();
+  for (let i = 0; i < 3000; i++) {
+    g.step([]);
+    if (etats.at(-1) !== g.state) etats.push(g.state);
+    comportements.add(g.behavior);
+    if (etats.length === 2) break;
+  }
+  assert.deepEqual(etats, ["patrol", "post"]);
+  assert.ok(comportements.has("path") && comportements.has("arrive"));
+  assert.ok(g.pos.dist(g.post) < env.mPx(3), "revenu à son poste");
+});
+
+test("après 8h55, ceux qui marchent encore pressent le pas (marche, groupe, formation)", () => {
+  const m = monde();
+  const b = m.campus.workplaces[0];
+  const e = m.foule.add({ x: b.door.x + m.mPx(60), y: b.door.y, building: b, state: "walk", origin: "tram" });
+  e.planWalkTo(m.foule.context());
+  e.chooseForces(m.foule.context());
+  const avant = e.maxSpeed;
+  assert.ok(Math.abs(avant - e.config.walkSpeed) < 1e-9);
+  m.foule.goToWork();
+  e.chooseForces(m.foule.context());
+  assert.ok(Math.abs(e.maxSpeed - avant * e.config.hurryFactor) < 1e-9);
+  assert.ok(e.maxSpeed < e.config.runSpeed, "on presse le pas sans courir");
 });

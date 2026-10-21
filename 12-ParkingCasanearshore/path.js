@@ -74,6 +74,22 @@ class Path {
     return this._cumul;
   }
 
+  // Abscisse curviligne (distance depuis le premier point, le long du chemin)
+  // d'un point `p` projeté sur le segment `index`.
+  positionAlong(index, p) {
+    const i = index % this.segmentCount();
+    const [a, b] = this.segment(i);
+    return this.cumulative()[i] + p5.Vector.dist(a, closestPointOnSegment(p, a, b));
+  }
+
+  // Distance le long du chemin pour aller de l'abscisse `de` à l'abscisse `a`
+  // (en faisant le tour pour un chemin fermé ; 0 si `a` est derrière sur un chemin ouvert).
+  distanceAlong(de, a) {
+    if (!this.closed) return Math.max(0, a - de);
+    const total = this.length();
+    return (((a - de) % total) + total) % total;
+  }
+
   // Distance restante jusqu'au dernier point depuis un point du segment index.
   remainingLength(index, depuis) {
     if (this.closed) return Infinity;

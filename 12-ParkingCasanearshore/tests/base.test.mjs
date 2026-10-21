@@ -11,7 +11,8 @@ import { chargerExemple, creerAlea, dossierExemple, Vector } from "./adaptateur-
 const EMPREINTE_VEHICLE = "2489335a34b6bd23b6dad1c039277a456387417e13f3d9526996683bf91ebf49";
 
 test("vehicle.js est identique à la base 1-Seek de micbuffa", () => {
-  const contenu = fs.readFileSync(path.join(dossierExemple, "vehicle.js"));
+  // Fins de ligne normalisées : sous Windows, Git peut extraire le fichier en CRLF.
+  const contenu = fs.readFileSync(path.join(dossierExemple, "vehicle.js"), "utf8").replace(/\r\n/g, "\n");
   const empreinte = crypto.createHash("sha256").update(contenu).digest("hex");
   assert.equal(empreinte, EMPREINTE_VEHICLE);
 });

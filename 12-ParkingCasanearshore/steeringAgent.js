@@ -29,7 +29,7 @@ class SteeringAgent extends Vehicle {
   // null : valeurs par défaut (facteurs 1), par exemple dans les tests.
   static settings = null;
   // Comportement principal → groupe de réglages.
-  static GROUPS = { seek: "seek", pursue: "pursue", arrive: "arrive", wander: "wander", path: "path", boids: "boids", leader: "leader" };
+  static GROUPS = { seek: "seek", neuro: "seek", pursue: "pursue", arrive: "arrive", wander: "wander", path: "path", boids: "boids", leader: "leader", file: "leader", evade: "evade" };
 
   // Lit un réglage, ou `defaut` s'il n'y a pas de réglages.
   static param(groupe, cle, defaut) {

@@ -1,7 +1,7 @@
 // Foule des employés (règles de scène et sélection d'action collective) :
-// apparitions (déjà sur place, sortie du tram, de la navette, d'une voiture),
-// groupes de discussion, groupes de marche (boids ou formation derrière un
-// guide), départ général à 8h55. Aucune formule de steering ici : chaque
+// apparitions (déjà sur place, sortie du tram, d'une voiture, retardataires),
+// groupes de discussion près des stands de café, pause sur un banc, groupes
+// de marche (boids ou formation derrière un guide), départ général à 8h55. Aucune formule de steering ici : chaque
 // employé calcule ses forces dans Employee.chooseForces().
 
 // Grille spatiale : retrouve les voisins sans parcourir toute la foule.
@@ -68,8 +68,9 @@ const CROWD_CONFIG = {
   minGroupSize: 2,
   formationShare: 0.5,      // part des groupes qui marchent en formation
   seekCoffeeShare: 0.08,    // passagers qui foncent au café avant de monter
-  badgeShare: 0.15,         // voitures avec un collègue passager (scénario du badge)
-  workDelaySeconds: 12      // à 8h55, départs étalés sur 12 s
+  sitChance: 0.002,         // par pas, pour un flâneur : aller s'asseoir sur un banc libre
+  workDelaySeconds: 12,     // à 8h55, départs étalés sur 12 s
+  offRoadM: 4.5             // flâneurs et discussions : à plus de 4,5 m de l'axe d'une chaussée
 };
 
 class Crowd {
@@ -85,7 +86,10 @@ class Crowd {
     this.grid = new SpatialGrid(mPx(8));
     // Obstacles des piétons : bâtiments, décor de l'esplanade, poteaux du garage.
     this.obstaclesSurface = [...campus.buildings, ...obstacles];
-    this.obstaclesGarage = world.garage.pillars;
+    this.obstaclesGarage = world.garages.flatMap(g => g.pillars);
+    // Axes des chaussées : les flâneurs et les discussions restent sur les
+    // espaces piétons (pas au milieu d'une route).
+    this.roadAxes = segmentsWithBounds(campus.data.roads.filter(r => !FOOT_TYPES.has(r.type)).map(r => r.points));
     this.cars = () => [];
     this.enteredCount = 0;
     this.enteredBy = {};
@@ -97,13 +101,14 @@ class Crowd {
   }
 
   randomBuilding() {
-    const total = this.campus.buildings.reduce((s, b) => s + b.area, 0);
+    const lieux = this.campus.workplaces;
+    const total = lieux.reduce((s, b) => s + b.area, 0);
     let t = this.rng() * total;
-    for (const b of this.campus.buildings) {
+    for (const b of lieux) {
       t -= b.area;
       if (t <= 0) return b;
     }
-    return this.campus.buildings.at(-1);
+    return lieux.at(-1);
   }
 
   add(options) {
@@ -130,12 +135,29 @@ class Crowd {
       // Chacun flâne sur l'esplanade la plus proche de son bâtiment.
       const building = this.randomBuilding();
       const zone = this.nearestEsplanade(building.door);
-      const a = this.rng() * Math.PI * 2;
-      const d = Math.sqrt(this.rng()) * zone.radius * 0.8;
-      const p = createVector(Math.cos(a), Math.sin(a)).mult(d).add(zone.center);
+      const p = this.freePointIn(zone);
       this.add({ x: p.x, y: p.y, building, state: "wander", zone, origin: "site", heading: p5.Vector.fromAngle(this.rng() * Math.PI * 2) });
     }
     this.formChats();
+  }
+
+  // Vrai si p est sur un espace piéton : hors des bâtiments (à plus de
+  // `facade` px d'une façade) et à plus de CROWD_CONFIG.offRoadM d'un axe de chaussée.
+  isPedestrianSpot(p, facade) {
+    return !nearSegments(p, this.roadAxes, mPx(this.config.offRoadM)) &&
+      this.campus.buildings.every(b => !b.contains(p) && p5.Vector.dist(p, b.closestPoint(p)) > facade);
+  }
+
+  // Point de la zone sur un espace piéton. Essais bornés ; à défaut, le
+  // centre de la zone (devant la porte, dehors).
+  freePointIn(zone) {
+    for (let essai = 0; essai < 30; essai++) {
+      const a = this.rng() * Math.PI * 2;
+      const d = Math.sqrt(this.rng()) * zone.radius * 0.8;
+      const p = createVector(Math.cos(a), Math.sin(a)).mult(d).add(zone.center);
+      if (this.isPedestrianSpot(p, mPx(1.5))) return p;
+    }
+    return zone.center.copy();
   }
 
   // Regroupe une partie des flâneurs de chaque esplanade en cercles de discussion.
@@ -171,14 +193,14 @@ class Crowd {
   // Centre d'un cercle de discussion : sur l'esplanade, à au moins 3 m du
   // décor et des autres cercles. Nombre d'essais borné ; null si aucun.
   chatCenter(zone) {
-    const obstacles = [zone.kiosk, ...zone.benches, ...zone.planters];
+    const obstacles = [zone.kiosk, ...zone.benches];
     for (let essai = 0; essai < 30; essai++) {
       const a = this.rng() * Math.PI * 2;
       const d = zone.radius * (0.35 + 0.35 * this.rng());
       const c = createVector(Math.cos(a), Math.sin(a)).mult(d).add(zone.center);
       const libre = obstacles.every(o => p5.Vector.dist(c, o.pos) > o.r + mPx(3)) &&
         this.chats.every(ch => p5.Vector.dist(c, ch.center) > mPx(5)) &&
-        this.campus.buildings.every(b => !b.contains(c) && p5.Vector.dist(c, b.closestPoint(c)) > mPx(5));
+        this.isPedestrianSpot(c, mPx(5));
       if (libre) return c;
     }
     return null;
@@ -192,7 +214,7 @@ class Crowd {
     if (this.workStarted) return;
     this.workStarted = true;
     for (const e of this.employees) {
-      if (["wander", "chat", "coffee"].includes(e.state)) {
+      if (["wander", "chat", "coffee", "sit"].includes(e.state)) {
         e.workDelay = Math.floor(this.rng() * stepsFor(this.config.workDelaySeconds));
       }
     }
@@ -202,15 +224,16 @@ class Crowd {
   startDueWorkers() {
     if (!this.workStarted) return;
     for (const e of this.employees) {
-      if (e.workDelay === undefined || !["wander", "chat", "coffee"].includes(e.state)) continue;
+      if (e.workDelay === undefined || !["wander", "chat", "coffee", "sit"].includes(e.state)) continue;
       if (e.workDelay-- > 0) continue;
       e.workDelay = undefined;
+      if (e.state === "sit") e.standUp();
       e.state = "walk";
       e.planWalkTo(this.context());
     }
   }
 
-  // ---------- Passagers du tram et de la navette ----------
+  // ---------- Passagers du tram ----------
 
   // Les passagers sortent par les portes et s'arrêtent à `distanceM` m.
   spawnPassengers(portes, cote, n, origine) {
@@ -293,13 +316,12 @@ class Crowd {
   // ---------- Conducteurs ----------
 
   // La voiture est garée : le conducteur descend (côté gauche) et va à son
-  // bâtiment (surface) ou à l'ascenseur (garage). Parfois un collègue passager
-  // descend aussi et part devant ; le conducteur, qui a son badge, le rattrape.
+  // bâtiment (surface) ou à l'ascenseur (garage).
   spawnDriver(car) {
     const gauche = createVector(car.heading.y, -car.heading.x);
     const p = gauche.copy().mult(car.widthPx / 2 + mPx(0.6)).add(car.pos);
     const auGarage = car.level === -1;
-    const cible = auGarage ? this.world.garage.elevatorDoor.copy() : car.building.door.copy();
+    const cible = auGarage ? car.spot.lot.garage.elevatorDoor.copy() : car.building.door.copy();
     const conducteur = this.add({ x: p.x, y: p.y, building: car.building, level: car.level, state: "walk", target: cible, origin: auGarage ? "garage" : "voiture", heading: gauche });
     const ctx = this.context();
     if (auGarage) {
@@ -307,23 +329,15 @@ class Crowd {
     } else {
       conducteur.planWalkTo(ctx);
     }
-    if (this.rng() < this.config.badgeShare) {
-      const q = gauche.copy().mult(-(car.widthPx / 2 + mPx(0.6))).add(car.pos);
-      const passager = this.add({ x: q.x, y: q.y, building: car.building, level: car.level, state: "walk", target: cible.copy(), origin: conducteur.origin, heading: gauche.copy().mult(-1) });
-      if (auGarage) passager.state = "arrive";
-      else passager.planWalkTo(ctx);
-      passager.waitingForBadge = true;
-      conducteur.state = "pursue";
-      conducteur.badgeFor = passager;
-      conducteur.waitSteps = 0;
-    }
     return conducteur;
   }
 
   // ---------- Retardataire ----------
 
   spawnLate(pos, building) {
-    return this.add({ x: pos.x, y: pos.y, building, state: "run", origin: "retard" });
+    const e = this.add({ x: pos.x, y: pos.y, building, state: "run", origin: "retard" });
+    e.planWalkTo(this.context());
+    return e;
   }
 
   // ---------- Un pas ----------
@@ -335,7 +349,8 @@ class Crowd {
         Math.abs(c.pos.x - e.pos.x) < e.evadeExitRadius + c.length && Math.abs(c.pos.y - e.pos.y) < e.evadeExitRadius + c.length),
       neighbors: (e, r) => this.grid.query(e.pos, r).filter(o => o !== e && o.level === e.level),
       planWalk: (de, a) => planWalk(this.campus, de, a, false),
-      onAlighted: e => this.onAlighted(e)
+      onAlighted: e => this.onAlighted(e),
+      hurry: this.workStarted
     };
   }
 
@@ -347,10 +362,15 @@ class Crowd {
     const ctx = this.context();
     const ctxGarage = { ...ctx, obstacles: this.obstaclesGarage };
     for (const e of this.employees) {
-      // Règle de scène : un flâneur va parfois chercher un café.
-      if (e.state === "wander" && !e.holdsCoffee && this.rng() < this.config.coffeeChance) {
-        e.state = "coffee";
-        e.nextStateAfterCoffee = "wander";
+      // Règles de scène : un flâneur va parfois chercher un café, ou s'asseoir.
+      if (e.state === "wander" && !this.workStarted) {
+        if (!e.holdsCoffee && this.rng() < this.config.coffeeChance) {
+          e.state = "coffee";
+          e.nextStateAfterCoffee = "wander";
+        } else if (this.rng() < this.config.sitChance) {
+          const banc = e.zone.benches.find(b => b.freeSeat());
+          if (banc) e.sitOn(banc, banc.freeSeat(), stepsFor(randomBetween(this.rng, ...e.config.sitSeconds)));
+        }
       }
       e.step(e.level === -1 ? ctxGarage : ctx);
     }
@@ -359,7 +379,7 @@ class Crowd {
   }
 
   walkingCount() {
-    return this.employees.filter(e => !["wander", "chat", "coffee", "gone"].includes(e.state)).length;
+    return this.employees.filter(e => !["wander", "chat", "coffee", "sit", "gone"].includes(e.state)).length;
   }
 
   // Piétons proches d'un point (pour que les voitures leur cèdent le passage).

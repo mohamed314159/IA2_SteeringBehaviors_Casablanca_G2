@@ -1,12 +1,12 @@
 // Employé (piéton) : sous-classe de SteeringAgent.
 //
 // Sélection d'action (états) et comportements utilisés :
-//   wander      avant 8h55, flâne sur l'esplanade (wander + confinement : seek
+//   wander      avant 8h55, flâne près d'un stand de café (wander + confinement : seek
 //               vers le centre de la zone s'il s'en éloigne)
 //   chat        discute en groupe : arrive sur sa place autour du groupe
 //   coffee      va chercher un café : arrive au comptoir du kiosque, attend
 //   seekCoffee  sorti du tram, fonce vers le kiosque (seek, sans freiner)
-//   alight      descend du tram ou de la navette : arrive à quelques mètres
+//   alight      descend du tram : arrive à quelques mètres
 //               de la porte (comme 5-3/passenger.js)
 //   walk        marche seul vers son bâtiment (path following)
 //   flock       marche en groupe de collègues (path following + boids :
@@ -14,8 +14,9 @@
 //   lead        guide d'un groupe en formation (path following, plus lent)
 //   follow      suit le guide en formation (suivi de leader : place derrière
 //               lui, évasion de la zone devant lui, séparation)
-//   run         en retard : court vers sa porte (seek, sans freiner)
-//   pursue      a le badge d'un collègue et le rattrape (pursue)
+//   run         en retard : court vers sa porte (seek, sans freiner) en visant
+//               un à un les points de son itinéraire piéton (trottoirs)
+//   sit         s'assoit sur un banc (arrive sur la place), puis repart flâner
 //   arrive      arrive à la porte du bâtiment (A9) ou à l'ascenseur (A18)
 //   gone        est entré : la scène le retire
 // Dans tous les états mobiles : évitement des bâtiments, kiosques, bancs,
@@ -25,8 +26,10 @@ const EMPLOYEE_CONFIG = {
   walkSpeed: kmh(5),
   wanderSpeed: kmh(2.2),
   runSpeed: kmh(12),
-  pursueSpeed: kmh(9),
+  runForce: 0.15,            // en courant, on tourne plus vite qu'en marchant
+  waypointRadiusM: 4,        // point de passage atteint à 4 m : on vise le suivant
   leadSpeedFactor: 0.85,     // le guide ralentit pour que le groupe suive
+  hurryFactor: 1.35,         // après 8h55, ceux qui marchent encore pressent le pas
   maxForce: 0.05,
   bodyRadiusM: 0.3,
   sizeFactor: 2.2,           // dessin et rayon agrandis pour rester visibles
@@ -37,10 +40,10 @@ const EMPLOYEE_CONFIG = {
   alightSlowRadius: mPx(2),
   enterDistance: mPx(1),     // disparaît à 1 m de la porte
   coffeeWaitSteps: stepsFor(6),
-  handoverDistance: mPx(1.5),// badge remis à 1,5 m
+  sitSeconds: [20, 70],      // durée assise sur un banc
   evadeDetectionM: 6,
   evadeExitM: 9,
-  weights: { avoid: 3, evade: 2.5, separate: 1.2, follow: 1, arrive: 1, seek: 1, wander: 0.8, containment: 1.5, align: 0.6, cohesion: 0.5, leader: 1, pursue: 1 }
+  weights: { avoid: 3, evade: 2.5, separate: 1.2, follow: 1, arrive: 1, seek: 1, wander: 0.8, containment: 1.5, align: 0.6, cohesion: 0.5, leader: 1 }
 };
 
 class Employee extends SteeringAgent {
@@ -80,7 +83,6 @@ class Employee extends SteeringAgent {
     this.slot = null;                         // place de discussion
     this.group = null;                        // groupe de marche
     this.formationSlot = null;
-    this.badgeFor = null;                     // collègue à rattraper
     this.holdsCoffee = false;
     this.waitSteps = 0;
     this.walkPhase = options.phase ?? 0;
@@ -103,6 +105,7 @@ class Employee extends SteeringAgent {
     const presDeLaPorte = this.target && p5.Vector.dist(this.pos, this.target) < mPx(12);
     for (const o of obstacles) {
       if (o === this.building && presDeLaPorte) continue;
+      if (o === this.bench) continue;
       const rayon = o.r ?? 0;
       if (p5.Vector.dist(this.pos, o.pos) - rayon < portee) proches.push(o);
     }
@@ -124,6 +127,11 @@ class Employee extends SteeringAgent {
   arriveWith(target, slowRadius, distanceArret = 0) {
     this.rayonZoneDeFreinage = slowRadius;
     return this.arriveAt(target, distanceArret);
+  }
+
+  // Allure de marche : on presse le pas après 8h55 (règle de scène lue dans le contexte).
+  pace(ctx) {
+    return ctx.hurry ? this.config.hurryFactor : 1;
   }
 
   // ---------- Sélection d'action : forces de l'état ----------
@@ -174,13 +182,13 @@ class Employee extends SteeringAgent {
         break;
       case "walk":
       case "lead":
-        this.maxSpeed = this.speedFor(this.config.walkSpeed * (this.state === "lead" ? this.config.leadSpeedFactor : 1));
+        this.maxSpeed = this.speedFor(this.config.walkSpeed * this.pace(ctx) * (this.state === "lead" ? this.config.leadSpeedFactor : 1));
         entrees.push({ name: "separate", force: this.separate(voisins), weight: w.separate });
         entrees.push({ name: "path", force: this.follow(this.path), weight: w.follow });
         nom = "path";
         break;
       case "flock": {
-        this.maxSpeed = this.speedFor(this.config.walkSpeed);
+        this.maxSpeed = this.speedFor(this.config.walkSpeed * this.pace(ctx));
         // Priorités (Reynolds) : séparation, puis le but (le chemin), puis
         // alignement et cohésion avec ce qui reste du budget de force.
         const groupe = this.group.members.filter(m => m !== this && m.state === "flock");
@@ -192,7 +200,7 @@ class Employee extends SteeringAgent {
         break;
       }
       case "follow": {
-        this.maxSpeed = this.speedFor(this.config.walkSpeed * 1.1);
+        this.maxSpeed = this.speedFor(this.config.walkSpeed * 1.1 * this.pace(ctx));
         const chef = this.group.leader;
         const suiveurs = this.group.members.filter(m => m.state === "follow");
         this.rayonZoneDeFreinage = this.config.slotSlowRadius;
@@ -205,13 +213,20 @@ class Employee extends SteeringAgent {
       }
       case "run":
         this.maxSpeed = this.speedFor(this.config.runSpeed);
-        entrees.push({ name: "seek", force: this.seekTo(this.target), weight: w.seek });
+        this.maxForce = this.config.runForce;
+        entrees.push({ name: "seek", force: this.seekTo(this.runWaypoint()), weight: w.seek });
         nom = "seek";
         break;
-      case "pursue":
-        this.maxSpeed = this.speedFor(this.config.pursueSpeed);
-        entrees.push({ name: "pursue", force: this.pursue(this.badgeFor), weight: w.pursue });
-        nom = "pursue";
+      case "sit":
+        // Assis : on reste sur le banc ; sinon on y va (arrive sur la place).
+        if (this.seated) {
+          entrees.push({ name: "brake", force: this.brake(), weight: 1 });
+          nom = "idle";
+        } else {
+          this.maxSpeed = this.speedFor(this.config.wanderSpeed * 1.3);
+          entrees.push({ name: "arrive", force: this.arriveWith(this.seat.pos, this.config.slotSlowRadius), weight: w.arrive });
+          nom = "arrive";
+        }
         break;
       case "arrive": {
         this.maxSpeed = this.speedFor(this.config.walkSpeed);
@@ -273,14 +288,19 @@ class Employee extends SteeringAgent {
         if (this.group.leader.state === "arrive" || this.group.leader.state === "gone") this.state = "arrive";
         break;
       case "run":
-        if (p5.Vector.dist(this.pos, this.target) <= mPx(2)) this.state = "arrive";
+        if (p5.Vector.dist(this.pos, this.target) <= mPx(2)) {
+          this.state = "arrive";
+          this.maxForce = this.config.maxForce;
+        }
         break;
-      case "pursue":
-        if (p5.Vector.dist(this.pos, this.badgeFor.pos) <= this.config.handoverDistance || this.badgeFor.state === "gone") {
-          this.badgeFor.waitingForBadge = false;
-          this.badgeFor = null;
-          this.state = "walk";
-          this.planWalkTo(ctx);
+      case "sit":
+        if (!this.seated && p5.Vector.dist(this.pos, this.seat.pos) < mPx(0.4) && this.vel.mag() < 0.05) {
+          this.seated = true;
+          this.vel.set(0, 0);
+          this.heading = this.bench.facing.copy();
+        } else if (this.seated && --this.sitSteps <= 0) {
+          this.standUp();
+          this.state = "wander";
         }
         break;
       case "arrive":
@@ -293,10 +313,39 @@ class Employee extends SteeringAgent {
     }
   }
 
+  // S'assoit sur une place libre du banc (règle de scène : la place est réservée).
+  sitOn(banc, seat, duree) {
+    this.bench = banc;
+    this.seat = seat;
+    seat.occupant = this;
+    this.seated = false;
+    this.obstacleCacheAge = 10; // recalcule les obstacles (sans son banc)
+    this.sitSteps = duree;
+    this.state = "sit";
+  }
+
+  standUp() {
+    if (this.bench) this.bench.release(this);
+    this.bench = null;
+    this.seat = null;
+    this.seated = false;
+  }
+
   // Calcule le chemin à pied jusqu'à la cible (réseau piéton).
   planWalkTo(ctx) {
     this.path = new Path([this.pos.copy(), ...ctx.planWalk(this.pos, this.target)], mPx(1.5));
     this.pathIndex = 0;
+    this.waypoint = 1;
+  }
+
+  // Point visé par le seek du retardataire : le prochain point de son
+  // itinéraire ; on passe au suivant à waypointRadiusM. Sans itinéraire : la cible.
+  runWaypoint() {
+    const points = this.path ? this.path.points : [this.target];
+    let i = Math.min(this.waypoint ?? 0, points.length - 1);
+    while (i < points.length - 1 && p5.Vector.dist(this.pos, points[i]) < mPx(this.config.waypointRadiusM)) i++;
+    this.waypoint = i;
+    return points[i];
   }
 
   show(zoom = 1) {
@@ -307,7 +356,7 @@ class Employee extends SteeringAgent {
     if (this.state === "chat" && this.chatCenter && this.vel.mag() < 0.05) cap = Math.atan2(this.chatCenter.y - this.pos.y, this.chatCenter.x - this.pos.x);
     rotate(cap);
     scale(this.sizeFactor());
-    drawEmployee(this.look, this.r, { phase: this.walkPhase, moving: this.vel.mag() > 0.05, coffee: this.holdsCoffee, highlight: this.highlight });
+    drawEmployee(this.look, this.r, { phase: this.walkPhase, moving: this.vel.mag() > 0.05 && !this.seated, coffee: this.holdsCoffee, highlight: this.highlight, seated: this.seated });
     pop();
   }
 }

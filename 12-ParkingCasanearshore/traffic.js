@@ -17,13 +17,14 @@ class TrafficManager {
 
   // Bâtiment de travail tiré au sort, pondéré par la surface.
   randomBuilding() {
-    const total = this.campus.buildings.reduce((s, b) => s + b.area, 0);
+    const lieux = this.campus.workplaces;
+    const total = lieux.reduce((s, b) => s + b.area, 0);
     let t = this.rng() * total;
-    for (const b of this.campus.buildings) {
+    for (const b of lieux) {
       t -= b.area;
       if (t <= 0) return b;
     }
-    return this.campus.buildings[this.campus.buildings.length - 1];
+    return lieux[lieux.length - 1];
   }
 
   randomSpec(kind) {
@@ -57,7 +58,7 @@ class TrafficManager {
       kind,
       gateKey,
       building,
-      path: new Path(points, mPx(1.5)),
+      path: new Path(points, mPx(ROAD_CONFIG.laneToleranceM)),
       config: options.config
     });
     this.cars.push(voiture);
@@ -65,7 +66,7 @@ class TrafficManager {
   }
 
   rampIsClear(car) {
-    const haut = this.world.garage.rampTop;
+    const haut = car.spot.lot.garage.rampTop;
     return !this.cars.some(c => c !== car && c.level === -1 && c.state !== "parked" &&
       p5.Vector.dist(c.pos, haut) < c.length + car.length / 2 + mPx(2));
   }
@@ -81,14 +82,14 @@ class TrafficManager {
       pedestrians: car.state === "parked" ? [] : this.pedestriansNear(car.pos, car.brakingZone() + car.length * 2),
       gate: this.world.gates[car.gateKey],
       insideSite: p => pointInPolygon(p, this.campus.site),
-      garage: this.world.garage,
-      pillars: this.world.garage.pillars,
-      assign: c => assignSpot(this.world.allLots, this.world.garage, c),
+      garage: car.spot && car.spot.lot.garage ? car.spot.lot.garage : null,
+      pillars: car.spot && car.spot.lot.garage ? car.spot.lot.garage.pillars : [],
+      assign: c => assignSpot(this.world.allLots, c),
       plan: (c, spot) => planSpotRoute(this.campus, this.world, c.gateKey, spot),
       // Règle de scène : passage au garage seulement si le haut de la rampe
       // est dégagé ; sinon la voiture attend à la bouche du garage.
       onEnterGarage: c => {
-        if (this.rampIsClear(c)) c.moveToGarage(this.world.garage);
+        if (this.rampIsClear(c)) c.moveToGarage(c.spot.lot.garage);
       },
       onParked: c => {
         this.parkedCount++;

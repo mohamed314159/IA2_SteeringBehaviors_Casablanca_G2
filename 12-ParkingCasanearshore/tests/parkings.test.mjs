@@ -2,11 +2,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { chargerExemple, Vector } from "./adaptateur-p5.mjs";
+import { FICHIERS_SIMULATION } from "./fichiers.mjs";
 
-const FICHIERS = ["vehicle.js", "geometry.js", "path.js", "collisions.js", "mapProjection.js", "data/casanearshore.js",
-  "roadNetwork.js", "steeringAgent.js", "building.js", "campus.js", "parkingSpot.js", "parkingLot.js", "gate.js",
-  "pillar.js", "garage.js", "parkingAllocator.js", "parkingWorld.js"];
-const NOMS = ["CASANEARSHORE", "Vehicle", "ParkingSpot", "ParkingLot", "Gate", "Garage", "Pillar", "Building",
+const FICHIERS = FICHIERS_SIMULATION;
+const NOMS = ["CASANEARSHORE", "CASANEARSHORE_REEL", "projectLatLon", "Vehicle", "ParkingSpot", "ParkingLot", "Gate", "Garage", "Pillar", "Building",
   "layoutParkingSpots", "assignSpot", "chooseSpot", "countSpots", "createCampus", "createParkingWorld", "planSpotRoute",
   "rectanglesSeTouchent", "pointInPolygon"];
 
@@ -72,7 +71,7 @@ test("attribution : place la plus proche du bâtiment, unique, compatible", () =
   lot.assignKind("ev", 2, new Vector(60, 0));
   const porte = new Vector(60, 42);
   const voitures = Array.from({ length: 30 }, (_, i) => ({ id: i, kind: "standard", destinationDoor: porte }));
-  const places = voitures.map(v => assignSpot([lot], null, v));
+  const places = voitures.map(v => assignSpot([lot], v));
   const attribuees = places.filter(Boolean);
   assert.equal(attribuees.length, 18, "22 places dont 4 réservées ♿/⚡");
   assert.equal(new Set(attribuees).size, attribuees.length, "aucune place attribuée deux fois");
@@ -83,9 +82,9 @@ test("attribution : place la plus proche du bâtiment, unique, compatible", () =
   const plusProche = libresAvant.reduce((m, s) => (s.pos.dist(porte) < m.pos.dist(porte) ? s : m));
   assert.equal(places[0], plusProche);
   // voiture électrique et PMR : leurs places dédiées restent disponibles
-  const ve = assignSpot([lot], null, { kind: "ev", destinationDoor: porte });
+  const ve = assignSpot([lot], { kind: "ev", destinationDoor: porte });
   assert.equal(ve.kind, "ev");
-  const pmr = assignSpot([lot], null, { kind: "pmr", destinationDoor: porte });
+  const pmr = assignSpot([lot], { kind: "pmr", destinationDoor: porte });
   assert.equal(pmr.kind, "pmr");
   const t = countSpots([lot]);
   assert.equal(t.reserved, 20);
@@ -114,28 +113,64 @@ test("porte : ligne d'arrêt avant la barrière ; la barrière s'ouvre puis se r
   assert.equal(g.opening, 0);
 });
 
-test("garage : places, poteaux hors des places, itinéraire depuis la rampe", () => {
-  const { world, Pillar, rectanglesSeTouchent } = monde();
-  const garage = world.garage;
-  assert.ok(garage.lot.capacity() > 100);
-  assert.ok(garage.pillars.length > 10 && garage.pillars.every(p => p instanceof Pillar));
-  // Un poteau peut toucher le bord arrière d'une place (comme dans un vrai
-  // sous-sol) mais pas l'emprise d'une voiture garée (4,7 × 1,9 m, centrée).
-  for (const p of garage.pillars) {
-    const r = { x: p.pos.x, y: p.pos.y, angle: 0, demiLongueur: p.r, demiLargeur: p.r };
-    for (const s of garage.lot.spots) {
-      const voiture = { x: s.pos.x, y: s.pos.y, angle: s.angle, demiLongueur: 4.7, demiLargeur: 1.9 };
-      assert.equal(rectanglesSeTouchent(r, voiture), false, "poteau sur une voiture garée");
+test("garages : un par groupe de rampes réelles, sous un bâtiment, plans séparés hors de la carte", () => {
+  const { world, campus, CASANEARSHORE_REEL: R, projectLatLon } = monde();
+  assert.equal(world.garages.length, 6);
+  const rampes = R.entreesSouterraines.map(([lon, lat]) => projectLatLon(lat, lon, campus.proj));
+  for (const g of world.garages) {
+    // La bouche est à moins de 60 m (120 px) d'une rampe OSM réelle.
+    assert.ok(rampes.some(r => Math.hypot(r.x - g.surfaceEntrance.x, r.y - g.surfaceEntrance.y) < 120), g.lot.name);
+    assert.notEqual(g.building.usage, "chantier");
+    assert.equal(g.lot.garage, g);
+    assert.ok(g.bounds.x > campus.data.width, "plan dessiné à droite de la carte");
+    assert.ok(world.allLots.includes(g.lot));
+  }
+  // Les plans ne se chevauchent pas.
+  for (const a of world.garages) {
+    for (const b of world.garages) {
+      if (a === b) continue;
+      const disjoints = a.bounds.y + a.bounds.h <= b.bounds.y || b.bounds.y + b.bounds.h <= a.bounds.y;
+      assert.ok(disjoints, `${a.lot.name} / ${b.lot.name}`);
     }
   }
-  assert.ok(garage.lot.spots.every(s => s.level === -1));
-  const s = garage.lot.spots[40];
-  const route = garage.routeToSpot(s);
-  assert.ok(route[0].equals(garage.rampTop));
-  assert.ok(route.at(-1).equals(s.aislePoint));
-  assert.ok(garage.rampSpeedFactor() < 1 && garage.rampSpeedFactor() > 0);
-  assert.equal(garage.isOnRamp(garage.rampTop.copy().add(0, 5)), true);
-  assert.equal(garage.isOnRamp(s.pos), false);
+});
+
+test("garage : places, poteaux hors des places, itinéraire depuis la rampe", () => {
+  const { world, Pillar, rectanglesSeTouchent } = monde();
+  for (const garage of world.garages) {
+    assert.ok(garage.lot.capacity() > 60);
+    assert.ok(garage.pillars.length > 10 && garage.pillars.every(p => p instanceof Pillar));
+    // Un poteau peut toucher le bord arrière d'une place (comme dans un vrai
+    // sous-sol) mais pas l'emprise d'une voiture garée (4,7 × 1,9 m, centrée).
+    for (const p of garage.pillars) {
+      const r = { x: p.pos.x, y: p.pos.y, angle: 0, demiLongueur: p.r, demiLargeur: p.r };
+      for (const s of garage.lot.spots) {
+        const voiture = { x: s.pos.x, y: s.pos.y, angle: s.angle, demiLongueur: 4.7, demiLargeur: 1.9 };
+        assert.equal(rectanglesSeTouchent(r, voiture), false, "poteau sur une voiture garée");
+      }
+    }
+    assert.ok(garage.lot.spots.every(s => s.level === -1));
+    const s = garage.lot.spots[40];
+    const route = garage.routeToSpot(s);
+    assert.ok(route[0].equals(garage.rampTop));
+    assert.ok(route.at(-1).equals(s.aislePoint));
+    assert.ok(garage.rampSpeedFactor() < 1 && garage.rampSpeedFactor() > 0);
+    assert.equal(garage.isOnRamp(garage.rampTop.copy().add(0, 5)), true);
+    assert.equal(garage.isOnRamp(s.pos), false);
+  }
+});
+
+test("attribution : le garage le plus pratique (place + ascenseur + marche depuis le bâtiment)", () => {
+  const { world, chooseSpot } = monde();
+  for (const garage of world.garages) {
+    // Pour une voiture qui va au bâtiment au-dessus d'un garage, tout le
+    // reste étant pris, on choisit bien une place de ce garage.
+    const pris = world.allLots.filter(l => l.garage !== garage).flatMap(l => l.spots.filter(sp => sp.isFree()));
+    for (const sp of pris) sp.reserve({});
+    const place = chooseSpot(world.allLots, "standard", garage.building.door);
+    for (const sp of pris) sp.release();
+    assert.equal(place.lot.garage, garage);
+  }
 });
 
 test("monde : chaque place de surface et du garage est accessible depuis les deux portes", () => {

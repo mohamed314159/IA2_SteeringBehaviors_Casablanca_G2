@@ -31,6 +31,37 @@ class RoadNetwork {
     na.edges.push({ to: b, length: longueur, type: road.type, service: road.service });
   }
 
+  // Plus grande composante connexe (tronçons suivis dans les deux sens) :
+  // ensemble des ids de ses sommets. Sert à ne jamais partir d'un morceau de
+  // réseau isolé, d'où aucun itinéraire ne mène nulle part.
+  largestComponent() {
+    const voisins = new Map([...this.nodes.keys()].map(id => [id, new Set()]));
+    for (const n of this.nodes.values()) {
+      for (const e of n.edges) {
+        voisins.get(n.id).add(e.to);
+        voisins.get(e.to).add(n.id);
+      }
+    }
+    const vus = new Set();
+    let meilleure = new Set();
+    for (const depart of this.nodes.keys()) {
+      if (vus.has(depart)) continue;
+      const composante = new Set([depart]);
+      const pile = [depart];
+      vus.add(depart);
+      while (pile.length) {
+        for (const v of voisins.get(pile.pop())) {
+          if (vus.has(v)) continue;
+          vus.add(v);
+          composante.add(v);
+          pile.push(v);
+        }
+      }
+      if (composante.size > meilleure.size) meilleure = composante;
+    }
+    return meilleure;
+  }
+
   // Sommet le plus proche d'un point, éventuellement filtré.
   nearestNode(point, filtre = () => true) {
     let meilleur = null;

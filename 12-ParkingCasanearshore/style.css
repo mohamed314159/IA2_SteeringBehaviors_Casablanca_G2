@@ -1,9 +1,10 @@
 :root {
   --fond: #1f242b;
-  --panneau: #2a3038;
+  --panneau: rgba(31, 36, 43, 0.92);
   --texte: #eef1f4;
   --texte-doux: #a9b4c0;
   --accent: #ffcc66;
+  --vert: #8fd8a8;
   --bordure: #3b434d;
 }
 
@@ -21,32 +22,17 @@ body {
   font-family: "Segoe UI", system-ui, sans-serif;
 }
 
-#barre {
+[hidden] {
+  display: none !important;
+}
+
+#scene {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  min-height: 48px;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 16px;
-  padding: 6px 16px;
-  background: var(--panneau);
-  border-bottom: 1px solid var(--bordure);
-  z-index: 2;
+  inset: 0;
 }
 
-#barre h1 {
-  font-size: 17px;
-  margin: 0;
-  white-space: nowrap;
-}
-
-#barre nav {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
+#scene canvas {
+  display: block;
 }
 
 button {
@@ -67,61 +53,98 @@ button:focus-visible {
   outline-offset: 1px;
 }
 
-#aide {
-  margin-left: auto;
-  font-size: 12px;
-  color: var(--texte-doux);
+/* ---------- Barre minimale (en haut à droite) ---------- */
+
+#barre {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 11;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px 4px 12px;
+  background: var(--panneau);
+  border: 1px solid var(--bordure);
+  border-radius: 999px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
 }
 
 #horloge {
   font-family: "Consolas", "Courier New", monospace;
-  font-size: 20px;
+  font-size: 14px;
   font-weight: bold;
   color: var(--accent);
-  min-width: 96px;
+  letter-spacing: 0.5px;
 }
 
-#vitesse {
-  font-size: 13px;
-  min-width: 190px;
-}
-
-#compteur-places {
-  font-size: 12px;
+#etat-temps {
+  font-size: 11px;
   color: var(--texte-doux);
 }
 
-.case {
-  font-size: 13px;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
+#etat-temps:empty {
+  display: none;
 }
 
-.bouton-reglages {
-  position: fixed;
-  right: 12px;
-  top: calc(var(--hauteur-barre, 48px) + 10px);
-  z-index: 11;
-  background: #38414c;
+button.icone {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 14px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
+
+button.icone.texte {
+  width: auto;
+  min-width: 28px;
+  padding: 0 7px;
+  border-radius: 14px;
+  font-size: 11px;
+  font-weight: bold;
+}
+
+/* ---------- Bandeau d'information (haut, au centre) ---------- */
+
+#bandeau {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  max-width: calc(100vw - 32px);
+  padding: 5px 14px;
+  font-size: 13px;
+  background: var(--panneau);
+  border: 1px solid var(--bordure);
+  border-radius: 999px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------- Panneau de réglages ---------- */
 
 .panneau-reglages {
   display: none;
   position: fixed;
-  top: calc(var(--hauteur-barre, 48px) + 46px);
-  right: 12px;
+  top: 54px;
+  right: 10px;
   z-index: 10;
   width: 360px;
   max-width: calc(100vw - 32px);
-  max-height: calc(100vh - var(--hauteur-barre, 48px) - 70px);
+  max-height: calc(100vh - 70px);
   overflow-y: auto;
   padding: 10px 14px 12px;
   color: var(--texte);
   font-size: 13px;
-  background: rgba(31, 36, 43, 0.94);
+  background: rgba(31, 36, 43, 0.95);
   border: 1px solid var(--bordure);
-  border-radius: 8px;
+  border-radius: 10px;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
 }
 
@@ -141,8 +164,42 @@ button:focus-visible {
   color: var(--accent);
 }
 
+.panneau-reglages .infos h3 {
+  margin: 10px 0 4px;
+  font-size: 13px;
+  color: var(--vert);
+}
+
+.panneau-reglages .infos p {
+  margin: 0;
+  line-height: 1.5;
+  color: var(--texte-doux);
+}
+
+.panneau-reglages table.places {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.panneau-reglages table.places td {
+  padding: 1px 4px;
+  color: var(--texte-doux);
+}
+
+.panneau-reglages table.places td:last-child {
+  text-align: right;
+  font-family: "Consolas", monospace;
+}
+
+.panneau-reglages table.places tr.total td {
+  padding-top: 4px;
+  color: var(--texte);
+  font-weight: bold;
+}
+
 .panneau-reglages .defaut {
-  margin-top: 6px;
+  margin-top: 10px;
 }
 
 .panneau-reglages fieldset {
@@ -154,7 +211,7 @@ button:focus-visible {
 
 .panneau-reglages legend {
   padding: 0 4px;
-  color: #8fd8a8;
+  color: var(--vert);
   font-weight: bold;
 }
 
@@ -177,31 +234,206 @@ button:focus-visible {
   color: var(--accent);
 }
 
-button[aria-pressed="true"] {
-  background: #5b6b7d;
-  border-color: var(--accent);
-}
+/* ---------- Écran d'accueil ---------- */
 
-#scene {
+#accueil {
   position: fixed;
-  top: var(--hauteur-barre, 48px);
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
+  z-index: 20;
+  overflow-y: auto;
+  padding: 32px 16px;
+  background: rgba(16, 20, 26, 0.88);
+  backdrop-filter: blur(3px);
 }
 
-#scene canvas {
+#accueil:focus {
+  outline: none;
+}
+
+.carte-accueil {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 28px 32px 24px;
+  background: #232a32;
+  border: 1px solid var(--bordure);
+  border-radius: 14px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  line-height: 1.5;
+}
+
+.carte-accueil h1 {
+  margin: 0 0 8px;
+  font-size: 28px;
+  color: var(--accent);
+}
+
+.carte-accueil h2 {
+  margin: 24px 0 10px;
+  font-size: 18px;
+  color: var(--vert);
+  border-bottom: 1px solid var(--bordure);
+  padding-bottom: 4px;
+}
+
+.carte-accueil .chapeau {
+  margin: 0;
+  font-size: 15px;
+  color: var(--texte);
+}
+
+.deroulement {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 14px;
+  color: var(--texte-doux);
+}
+
+.deroulement li {
+  margin: 4px 0;
+}
+
+.deroulement strong {
+  color: var(--texte);
+}
+
+.grille-comportements {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.comportement {
+  padding: 10px;
+  background: #2b333c;
+  border: 1px solid var(--bordure);
+  border-radius: 10px;
+}
+
+.comportement canvas {
   display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 240 / 140;
+  border-radius: 6px;
 }
 
-#credits {
-  position: fixed;
-  right: 8px;
-  bottom: 6px;
-  font-size: 11px;
-  color: #333;
-  background: rgba(255, 255, 255, 0.75);
-  padding: 2px 6px;
-  border-radius: 4px;
-  z-index: 2;
+.comportement h3 {
+  margin: 8px 0 4px;
+  font-size: 15px;
+  color: var(--accent);
+}
+
+.comportement p {
+  margin: 0 0 4px;
+  font-size: 13px;
+  color: var(--texte-doux);
+}
+
+.comportement p.ou strong {
+  color: var(--texte);
+}
+
+table.commandes {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+table.commandes td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--bordure);
+  color: var(--texte-doux);
+  vertical-align: top;
+}
+
+table.commandes td:first-child {
+  white-space: nowrap;
+  color: var(--texte);
+  width: 1%;
+}
+
+kbd,
+.touche {
+  display: inline-block;
+  min-width: 22px;
+  padding: 1px 6px;
+  font-family: "Consolas", monospace;
+  font-size: 12px;
+  text-align: center;
+  color: var(--texte);
+  background: #38414c;
+  border: 1px solid #56606c;
+  border-radius: 5px;
+}
+
+.touche {
+  border-radius: 11px;
+  font-weight: bold;
+}
+
+.pied-accueil {
+  display: flex;
+  justify-content: center;
+  margin-top: 26px;
+}
+
+#bouton-commencer {
+  padding: 10px 40px;
+  font-size: 17px;
+  font-weight: bold;
+  color: #1f242b;
+  background: var(--accent);
+  border: none;
+  border-radius: 999px;
+}
+
+#bouton-commencer:hover,
+#bouton-commencer:focus-visible {
+  background: #ffd98a;
+  outline: 3px solid #fff;
+}
+
+@media (max-width: 600px) {
+  .carte-accueil {
+    padding: 18px 16px;
+  }
+
+  table.commandes td:first-child {
+    white-space: normal;
+  }
+}
+
+/* ---------- « Voir sur la carte » (panneau) et mode « véhicules seuls » ---------- */
+
+.panneau-reglages .localiser {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 2px 0 6px;
+  padding-bottom: 6px;
+  border-bottom: 1px dashed var(--bordure);
+}
+
+.panneau-reglages .localiser .compte {
+  font-size: 12px;
+  color: var(--texte-doux);
+}
+
+.panneau-reglages .localiser button {
+  padding: 3px 9px;
+  font-size: 12px;
+  border-radius: 12px;
+}
+
+.panneau-reglages .localiser button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  outline: none;
+}
+
+#bouton-noir[aria-pressed="true"] {
+  color: #1f242b;
+  background: var(--accent);
+  border-color: var(--accent);
 }

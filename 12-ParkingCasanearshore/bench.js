@@ -1,4 +1,5 @@
-// Banc de l'esplanade : obstacle immobile (Vehicle, update() jamais appelé).
+// Banc à deux places : obstacle immobile (Vehicle, update() jamais appelé),
+// et destination des employés qui s'y assoient avant 8h55.
 class Bench extends Vehicle {
   constructor(x, y, angle = 0) {
     super(x, y);
@@ -6,6 +7,21 @@ class Bench extends Vehicle {
     this.maxForce = 0;
     this.angle = angle;
     this.r = mPx(1);
+    // On s'assoit face à l'avant du banc.
+    this.facing = createVector(Math.cos(angle + Math.PI / 2), Math.sin(angle + Math.PI / 2));
+    const le_long = createVector(Math.cos(angle), Math.sin(angle));
+    this.seats = [-1, 1].map(s => ({
+      pos: le_long.copy().mult(mPx(0.5) * s).add(this.facing.copy().mult(mPx(0.15))).add(this.pos),
+      occupant: null
+    }));
+  }
+
+  freeSeat() {
+    return this.seats.find(s => s.occupant === null) ?? null;
+  }
+
+  release(employe) {
+    for (const s of this.seats) if (s.occupant === employe) s.occupant = null;
   }
 
   show() {

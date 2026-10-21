@@ -14,6 +14,7 @@
     <script src="path.js"></script>
     <script src="mapProjection.js"></script>
     <script src="data/casanearshore.js"></script>
+    <script src="data/reel.js"></script>
     <script src="roadNetwork.js"></script>
     <script src="steeringAgent.js"></script>
     <script src="collisions.js"></script>
@@ -29,18 +30,25 @@
     <script src="carModels.js"></script>
     <script src="roadVehicle.js"></script>
     <script src="luxuryCar.js"></script>
-    <script src="shuttle.js"></script>
+    <script src="g4sVehicle.js"></script>
     <script src="tramCar.js"></script>
     <script src="tram.js"></script>
     <script src="traffic.js"></script>
     <script src="transit.js"></script>
     <script src="coffeeKiosk.js"></script>
     <script src="bench.js"></script>
-    <script src="planter.js"></script>
+    <script src="assemblyPoint.js"></script>
     <script src="esplanade.js"></script>
     <script src="outfits.js"></script>
     <script src="employee.js"></script>
+    <script src="securityGuard.js"></script>
     <script src="crowd.js"></script>
+    <script src="neuralNetwork.js"></script>
+    <script src="bird.js"></script>
+    <script src="bread.js"></script>
+    <script src="cat.js"></script>
+    <script src="butterfly.js"></script>
+    <script src="wildlife.js"></script>
     <script src="clock.js"></script>
     <script src="schedule.js"></script>
     <script src="simSpeed.js"></script>
@@ -49,34 +57,81 @@
     <script src="panneau.js"></script>
     <script src="debug.js"></script>
     <script src="camera.js"></script>
+    <script src="trees.js"></script>
+    <script src="groundShader.js"></script>
     <script src="mapRenderer.js"></script>
+    <script src="vehicleGlow.js"></script>
+    <script src="localisation.js"></script>
+    <script src="accueil.js"></script>
     <script src="sketch.js"></script>
   </head>
   <body>
-    <header id="barre">
-      <h1>Parking Casanearshore</h1>
-      <span id="horloge">08:30:00</span>
-      <nav aria-label="Temps">
-        <button type="button" id="bouton-pause" title="Pause / lecture (Espace)">⏸ Pause</button>
-        <button type="button" data-vitesse="1">×1</button>
-        <button type="button" data-vitesse="2">×2</button>
-        <button type="button" data-vitesse="4">×4</button>
-        <label class="case"><input type="checkbox" id="case-auto" checked /> Accélérer quand rien ne se passe</label>
-        <button type="button" id="bouton-recommencer" title="Recommencer la matinée (R)">↺ Recommencer</button>
-      </nav>
-      <span id="vitesse" aria-live="polite">▶ ×1</span>
-      <nav aria-label="Vues">
-        <button type="button" data-vue="ensemble">Vue d'ensemble</button>
-        <button type="button" data-vue="nord">Porte nord</button>
-        <button type="button" data-vue="sud">Porte sud</button>
-        <button type="button" data-vue="station">Station du tram</button>
-        <button type="button" id="bouton-garage" data-vue="garage">Voir le garage</button>
-      </nav>
-      <span id="compteur-places" aria-live="polite"></span>
-      <span id="surbrillance" aria-live="polite"></span>
-      <span id="aide">Glisser : déplacer · molette : zoom · G : garage · Espace : pause · D : debug · 1-8 : surbrillance · P : réglages</span>
-    </header>
     <main id="scene"></main>
-    <footer id="credits">Carte : © OpenStreetMap contributors (ODbL)</footer>
+
+    <!-- Barre minimale : heure et quatre petits boutons (détaillés dans l'accueil). -->
+    <div id="barre" hidden>
+      <span id="horloge" aria-live="off" title="Heure de la simulation">08:30</span>
+      <span id="etat-temps" aria-live="polite"></span>
+      <button type="button" id="bouton-pause" class="icone" aria-label="Pause (Espace)" title="Pause (Espace)">⏸</button>
+      <button type="button" id="bouton-garage" class="icone texte" aria-label="Garages souterrains (G)" title="Garages souterrains (G)">P-1</button>
+      <button type="button" id="bouton-noir" class="icone" aria-pressed="false" aria-label="Véhicules seuls sur fond noir (B)" title="Véhicules seuls sur fond noir (B)">◐</button>
+      <button type="button" id="bouton-aide" class="icone" aria-label="Revoir l'accueil (H)" title="Revoir l'accueil (H)">?</button>
+    </div>
+    <div id="bandeau" aria-live="polite" hidden></div>
+
+    <!-- Écran d'accueil : description détaillée, puis « Commencer ». -->
+    <section id="accueil" role="dialog" aria-modal="true" aria-labelledby="accueil-titre">
+      <div class="carte-accueil">
+        <h1 id="accueil-titre">Une matinée à Casanearshore</h1>
+        <p class="chapeau">
+          Simulation des <em>steering behaviors</em> de Craig Reynolds (1999) sur la vraie carte du parc
+          d'affaires Casanearshore, à Casablanca. Chaque matin dure de <strong>8h30 à 9h05</strong> ; à 9h05,
+          une nouvelle matinée commence toute seule.
+        </p>
+
+        <h2>Ce qui se passe</h2>
+        <ul class="deroulement">
+          <li><strong>Voitures de luxe.</strong> Elles arrivent par les bords de la carte et suivent les vraies routes
+            jusqu'aux portes nord et sud. À la barrière, chacune reçoit sa place, puis va s'y garer : en surface ou
+            dans l'un des six garages souterrains (les rampes réelles sous les Shores).</li>
+          <li><strong>Tram.</strong> Deux longues caisses de 32 m s'arrêtent à la station « Casa Nearshore », au nord
+            du parc. Les passagers descendent quand le tram est arrêté.</li>
+          <li><strong>Employés.</strong> En costume, chemise ou tailleur, ils marchent sur les trottoirs et les chemins
+            piétons. Avant 8h55, ils flânent, prennent un café aux stands près des bâtiments, discutent en petits
+            groupes ou s'assoient sur les bancs. À 8h55, chacun rejoint son bâtiment.</li>
+          <li><strong>Sécurité.</strong> Les gardiens en blanc sont postés aux portes et font des rondes. Un convoi de
+            quatre véhicules G4S fait le tour du parc : un leader en tête, trois suiveurs.</li>
+          <li><strong>Faune.</strong> Deux chats chassent un papillon ; quand l'un l'attrape, un autre papillon
+            apparaît. Des oiseaux apprennent à attraper un morceau de pain (réseau de neurones de 8 neurones
+            cachés) : un oiseau qui s'arrête sans l'avoir attrapé disparaît et revient avec un nouveau cerveau,
+            copie mutée du meilleur.</li>
+          <li><strong>Temps.</strong> Une fois que tout le monde est entré au travail, le temps s'accélère jusqu'à 9h05.</li>
+        </ul>
+
+        <h2>Les 8 comportements</h2>
+        <div class="grille-comportements" id="grille-comportements"></div>
+
+        <h2>Commandes</h2>
+        <table class="commandes">
+          <tbody>
+            <tr><td><span class="touche">⏸</span> ou <kbd>Espace</kbd></td><td>Pause / reprise</td></tr>
+            <tr><td><span class="touche">P-1</span> ou <kbd>G</kbd></td><td>Garages souterrains : chaque appui montre le garage suivant, puis revient à la surface</td></tr>
+            <tr><td><span class="touche">◐</span> ou <kbd>B</kbd></td><td>Véhicules seuls : la carte devient noire, il ne reste que ce qui bouge (voitures, convoi, tram, piétons, animaux) ; même bouton pour revenir</td></tr>
+            <tr><td><span class="touche">⚙</span> ou <kbd>P</kbd></td><td>Réglages : vitesse et taille de chaque comportement, brillance des véhicules, places libres de chaque parking, statistiques de la matinée et des oiseaux. Dans chaque comportement, <strong>📍 Voir sur la carte</strong> indique combien d'entités le font en ce moment et centre la vue sur l'une d'elles (cliquer encore : la suivante), que la caméra suit ensuite</td></tr>
+            <tr><td><span class="touche">?</span> ou <kbd>H</kbd></td><td>Revoir cet écran (la simulation se met en pause)</td></tr>
+            <tr><td>Glisser, molette, <kbd>+</kbd> <kbd>-</kbd>, flèches</td><td>Déplacer et zoomer la vue</td></tr>
+            <tr><td><kbd>V</kbd> <kbd>N</kbd> <kbd>S</kbd> <kbd>T</kbd></td><td>Vue d'ensemble, porte nord, porte sud, station du tram</td></tr>
+            <tr><td><kbd>1</kbd> à <kbd>8</kbd></td><td>Entourer les entités qui exécutent ce comportement (même touche pour enlever)</td></tr>
+            <tr><td><kbd>D</kbd></td><td>Debug : rayons de freinage, vecteur ahead, points prédits, cercle du wander, nom du comportement</td></tr>
+            <tr><td><kbd>R</kbd></td><td>Nouvelle matinée tout de suite (sinon elle démarre seule à 9h05)</td></tr>
+            <tr><td><kbd>Échap</kbd></td><td>Fermer les réglages et arrêter de suivre une entité</td></tr>
+          </tbody>
+        </table>
+
+        <div class="pied-accueil">
+          <button type="button" id="bouton-commencer">Commencer</button>
+        </div>
+      </div>
+    </section>
   </body>
 </html>

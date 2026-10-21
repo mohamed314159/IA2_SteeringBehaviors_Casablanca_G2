@@ -1,4 +1,4 @@
-// Tram à deux longues caisses (16 m chacune). La tête est un SteeringAgent
+// Tram à deux longues caisses (32 m chacune, 65 m au total). La tête est un SteeringAgent
 // qui suit la voie (path following) puis fait un arrive très long au quai
 // (A5 : véhicule lourd) ; la seconde caisse (TramCar) la suit comme un anneau
 // de serpent. Les portes ne s'ouvrent qu'à l'arrêt complet des deux caisses.
@@ -15,7 +15,7 @@ const TRAM_CONFIG = {
   stationSlowRadius: mPx(150), // A5 : 150 m de freinage avant le quai (≥ v² / maxForce)
   dwellSteps: stepsFor(30),    // 30 s à quai
   doorOpenSteps: stepsFor(2),
-  carLengthM: 16,
+  carLengthM: 32,           // 2 × 32 m = 65 m, comme les rames doubles de Casablanca
   widthM: 2.65
 };
 
@@ -110,12 +110,12 @@ class Tram extends SteeringAgent {
     }
   }
 
-  // Portes côté quai : deux par caisse.
+  // Portes côté quai : quatre par caisse.
   doorPoints() {
     const points = [];
     for (const caisse of this.cars()) {
       const cote = this.platformSide.copy().setMag(caisse.widthPx / 2 + mPx(1.2));
-      for (const t of [-0.3, 0.15]) {
+      for (const t of [-0.38, -0.14, 0.1, 0.34]) {
         points.push(caisse.heading.copy().mult(caisse.length * t + mPx(1.4)).add(caisse.pos).add(cote));
       }
     }

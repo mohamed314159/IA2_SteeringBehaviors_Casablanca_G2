@@ -1,8 +1,8 @@
-// Transports en commun (règles de scène) : ligne du tram sur la voie réservée
+// Transports et rondes (règles de scène) : ligne du tram sur la voie réservée
 // en haut de Casanearshore (tracé OSM du Casabusway BW1, station
-// « Casa Nearshore »), et navette G4S qui entre par la porte nord, s'arrête
-// au centre du parc puis repart par la sortie nord.
-// Aucune formule de steering ici : Tram et Shuttle calculent leurs forces.
+// « Casa Nearshore »), et convoi G4S de 4 véhicules (un leader et trois
+// suiveurs) qui fait la ronde du parc en boucle.
+// Aucune formule de steering ici : Tram et G4SVehicle calculent leurs forces.
 
 // Assemble les tronçons d'une direction de la voie en un seul tracé continu.
 function chainPolylines(troncons) {
@@ -21,6 +21,20 @@ function chainPolylines(troncons) {
     reste.splice(reste.indexOf(suivant), 1);
   }
   return resultat;
+}
+
+// Point situé à `distance` px en arrière du premier point d'une boucle fermée
+// (on remonte les segments), avec l'indice et la direction de son segment.
+function pointBehindOnLoop(points, distance) {
+  let reste = distance;
+  for (let k = points.length - 1; k >= 0; k--) {
+    const a = points[k];
+    const b = points[(k + 1) % points.length];
+    const l = p5.Vector.dist(a, b);
+    if (reste <= l && l > 0) return { pos: p5.Vector.lerp(b, a, reste / l), index: k, dir: p5.Vector.sub(b, a).normalize() };
+    reste -= l;
+  }
+  return { pos: points[0].copy(), index: 0, dir: p5.Vector.sub(points[1], points[0]).normalize() };
 }
 
 function closestPointOnPolyline(p, points) {
@@ -44,7 +58,10 @@ const TRANSIT_CONFIG = {
     est: [1192067193, 1192067192, 1110644724],
     ouest: [1110644725, 1192067195, 1192067194]
   },
-  shuttleExitGate: 5688433270
+  // Ronde du convoi G4S : circuit entre les carrefours les plus proches de
+  // ces deux bâtiments (aller par une route, retour par une autre).
+  patrolEnds: ["Shore 1", "Shore 22"],
+  convoySize: 4
 };
 
 class TransitManager {
@@ -56,9 +73,8 @@ class TransitManager {
     this.config = config;
     this.trams = [];
     this.onTramDoorsOpen = null;
-    this.onShuttleDoorsOpen = null;
     this.buildTramLines();
-    this.buildShuttleRoute();
+    this.buildPatrolLoop();
   }
 
   buildTramLines() {
@@ -74,46 +90,46 @@ class TransitManager {
     this.stationCenter = centre;
   }
 
-  // Arrêt de la navette : sommet routier du parc (hors parkings) le plus
-  // proche du centre des bâtiments.
-  buildShuttleRoute() {
+  // Boucle de ronde du convoi : un vrai circuit, sans demi-tour. Plus court
+  // chemin d'un carrefour à l'autre, puis retour par d'autres rues (les
+  // sommets intérieurs de l'aller sont interdits). Le convoi ne croise donc
+  // jamais sa propre queue en sens inverse.
+  buildPatrolLoop() {
     const c = this.campus;
     const net = c.network;
-    const centre = createVector(0, 0);
-    for (const b of c.buildings) centre.add(b.center);
-    centre.div(c.buildings.length);
-    // Route traversante du parc (au moins deux tronçons), hors allées de parking.
-    const candidats = [...net.nodes.values()].filter(n => c.insideSite(n) && !n.services.has("parking_aisle") &&
-      !n.services.has("driveway") && n.edges.length >= 2 &&
-      !this.world.lots.some(l => pointInPolygon(createVector(n.x, n.y), l.points)));
-    const arret = candidats.reduce((m, n) => (Math.hypot(n.x - centre.x, n.y - centre.y) < Math.hypot(m.x - centre.x, m.y - centre.y) ? n : m));
-    this.shuttleStopNode = arret;
+    const routeDuParc = n => c.insideSite(n) && !this.world.lots.some(l => pointInPolygon(createVector(n.x, n.y), l.points));
+    const carrefour = n => routeDuParc(n) && n.edges.length >= 3;
+    const [a, b] = this.config.patrolEnds.map(nom => c.buildings.find(x => x.name === nom))
+      .map(bat => (bat ? net.nearestNode(bat.door, carrefour) : null));
+    const aller = a && b ? net.shortestPath(a.id, b.id, routeDuParc) : null;
+    const interieur = new Set(aller ? aller.slice(1, -1) : []);
+    const retour = aller ? net.shortestPath(b.id, a.id, n => routeDuParc(n) && !interieur.has(n.id)) : null;
+    const ids = aller && retour ? [...aller, ...retour.slice(1, -1)] : aller ?? [];
     const decalage = metres(c.config.laneOffsetM, c.proj);
-    const pas = mPx(1);
-    const points = ids => simplifyPolyline(offsetPolylineRight(net.points(ids), decalage), pas);
-    const dedans = net.shortestPath(c.gates.nord.osmId, arret.id, c.insideSite);
-    this.shuttleInside = points(dedans);
-    this.shuttleStopPoint = createVector(this.shuttleInside.at(-1).x, this.shuttleInside.at(-1).y);
-    // Retour : arrêt → sortie nord (dans le parc) → bord de carte (dehors).
-    const sortie = this.config.shuttleExitGate;
-    const versSortie = net.shortestPath(arret.id, sortie, c.insideSite);
-    const entreesNord = c.entries.filter(e => e.gate === "nord");
-    // En sortant, la navette tourne à droite (vers l'est) : elle ne coupe pas
-    // la file des voitures qui attendent devant l'entrée nord, à l'ouest.
-    const sortieNode = net.nodes.get(sortie);
-    const versLEst = entreesNord.filter(e => e.pos.x > sortieNode.x);
-    let meilleure = null;
-    let longueur = Infinity;
-    for (const e of versLEst.length ? versLEst : entreesNord) {
-      const r = net.shortestPath(sortie, e.nodeId, n => !c.insideSite(n));
-      if (r && net.routeLength(r) < longueur) {
-        longueur = net.routeLength(r);
-        meilleure = r;
-      }
+    this.patrolIsLoop = Boolean(aller && retour);
+    this.patrolPoints = simplifyPolyline(offsetPolylineRight([...net.points(ids), net.points(ids)[0]], decalage), mPx(1)).slice(0, -1);
+  }
+
+  // Convoi G4S de 4 véhicules : la tête suit la boucle, les autres la suivent.
+  // Ils partent en colonne, espacés comme en roulant, le long de la boucle.
+  createConvoy() {
+    const pts = this.patrolPoints.map(p => createVector(p.x, p.y));
+    const chemin = new Path(pts, mPx(G4S_CONFIG.laneToleranceM), true);
+    const espacement = mPx(4.9 + G4S_CONFIG.convoyGapM);
+    let devant = null;
+    const convoi = [];
+    for (let i = 0; i < this.config.convoySize; i++) {
+      const place = pointBehindOnLoop(pts, i * espacement);
+      const v = new G4SVehicle(place.pos.x, place.pos.y, { path: chemin, predecessor: devant, number: i + 1 });
+      v.heading = place.dir.copy();
+      v.vel = v.heading.copy().mult(0.5);
+      v.pathIndex = place.index;
+      this.trafic.cars.push(v);
+      convoi.push(v);
+      devant = v;
     }
-    this.shuttleExit = points([...versSortie, ...meilleure.slice(1)]);
-    // La navette arrive par l'ouest (entrée de la carte la plus proche par la route).
-    this.shuttleEntry = entreesNord.reduce((m, e) => (e.routeLength < m.routeLength ? e : m));
+    this.convoy = convoi;
+    return convoi;
   }
 
   spawnTram(sens = "ouest", passengers = 40) {
@@ -125,30 +141,6 @@ class TransitManager {
     });
     this.trams.push(tram);
     return tram;
-  }
-
-  // La navette circule avec les voitures (mêmes règles, même liste).
-  spawnShuttle(passengers = 20) {
-    const c = this.campus;
-    const ids = c.network.shortestPath(this.shuttleEntry.nodeId, c.gates.nord.osmId, n => !c.insideSite(n));
-    const decalage = metres(c.config.laneOffsetM, c.proj);
-    const pointsRoute = simplifyPolyline(offsetPolylineRight(c.network.points(ids), decalage), mPx(1));
-    pointsRoute.push(this.world.gates.nord.stopLine.copy());
-    const navette = new Shuttle(pointsRoute[0].x, pointsRoute[0].y, {
-      gateKey: "nord",
-      path: new Path(pointsRoute, mPx(1.5)),
-      stopPoint: this.shuttleStopPoint,
-      insideRoute: this.shuttleInside,
-      exitRoute: this.shuttleExit,
-      passengers,
-      onDoorsOpen: s => this.onShuttleDoorsOpen && this.onShuttleDoorsOpen(s)
-    });
-    this.trafic.cars.push(navette);
-    return navette;
-  }
-
-  shuttles() {
-    return this.trafic.cars.filter(c => c instanceof Shuttle);
   }
 
   // Un pas : chaque tram avance ; les véhicules sortis de la carte sont retirés.

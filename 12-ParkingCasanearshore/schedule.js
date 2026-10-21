@@ -2,23 +2,22 @@
 // événements datés, tirés avec un générateur à graine (reproductible).
 //   car      une voiture apparaît au bord de la carte
 //   tram     un tram arrive (direction, nombre de passagers)
-//   shuttle  la navette G4S arrive (nombre de passagers)
 //   late     un employé en retard arrive en courant
 //   work     8h55 : tout le monde va travailler
 // Les heures sont en secondes depuis le début de la simulation (8h30).
 const SCHEDULE_CONFIG = {
   cars: 110,
-  rushCenter: { h: 8, m: 49 },  // pic d'arrivée des voitures
+  rushCenter: { h: 8, m: 45 },  // pic d'arrivée des voitures
   rushSpreadMin: 4,              // écart type du pic (minutes)
   earlyShare: 0.2,               // part des voitures arrivant tôt (répartie uniformément)
   firstCar: { h: 8, m: 31 },
-  lastCar: { h: 9, m: 0 },
+  // Derniers arrivés : à pied, jusqu'à 750 m (10 à 15 min par les trottoirs) ;
+  // tout le monde est entré quelques minutes avant 9h05.
+  lastCar: { h: 8, m: 55 },
   tramEveryMin: 4,
   firstTram: { h: 8, m: 32 },
-  lastTram: { h: 8, m: 57 },
+  lastTram: { h: 8, m: 44 },
   tramPassengers: [12, 22],
-  shuttles: [{ h: 8, m: 37 }, { h: 8, m: 46 }, { h: 8, m: 52 }],
-  shuttlePassengers: [10, 16],
   late: [{ h: 8, m: 54, s: 0 }, { h: 8, m: 54, s: 30 }]
 };
 
@@ -48,10 +47,6 @@ function buildSchedule(rng, clock, config = SCHEDULE_CONFIG) {
   for (let instant = t(config.firstTram); instant <= t(config.lastTram); instant += config.tramEveryMin * 60) {
     const [a, b] = config.tramPassengers;
     evenements.push({ time: instant, type: "tram", direction: sens++ % 2 ? "est" : "ouest", passengers: a + Math.floor(rng() * (b - a + 1)) });
-  }
-  for (const hm of config.shuttles) {
-    const [a, b] = config.shuttlePassengers;
-    evenements.push({ time: t(hm), type: "shuttle", passengers: a + Math.floor(rng() * (b - a + 1)) });
   }
   for (const hm of config.late) evenements.push({ time: t(hm), type: "late" });
   evenements.push({ time: t(clock.config.work), type: "work" });
