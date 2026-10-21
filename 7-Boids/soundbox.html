@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SoundBox — sons des perroquets</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 24px 16px;
+        color: #f5f5f5;
+        font: 15px/1.45 "Consolas", "Courier New", monospace;
+        background: #2b2b2b;
+      }
+      main { max-width: 760px; margin: 0 auto; }
+      h1 { color: #ffe35a; text-shadow: 2px 2px 0 #3a3000; font-size: 22px; }
+      .son {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 4px 16px;
+        margin: 12px 0;
+        padding: 12px 14px;
+        background: #3a3a3a;
+        border: 3px solid #555;
+      }
+      .son h2 { margin: 0; font-size: 16px; color: #8fe36b; }
+      .son code { color: #3fe6cf; }
+      .son p { margin: 0; grid-column: 1; }
+      .son button { grid-column: 2; grid-row: 1 / span 3; align-self: center; }
+      button {
+        font: inherit;
+        padding: 8px 14px;
+        color: #fff;
+        background: #6b6b6b;
+        border: 2px solid #a0a0a0;
+        cursor: pointer;
+      }
+      button:hover, button:focus-visible { background: #7d7d7d; outline: 2px solid #ffe35a; }
+      .quand { color: #c8c8c8; }
+      label { display: inline-flex; gap: 8px; align-items: center; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>SoundBox — les sons de l'exemple</h1>
+      <p>Tous les sons sont synthétisés en direct par <code>soundbox.js</code> (Web Audio API), sans fichier audio.</p>
+      <p>
+        <label>Volume <input id="volume" type="range" min="0" max="1" step="0.05" value="0.6"></label>
+        <button id="tout-arreter" type="button">Tout arrêter</button>
+      </p>
+      <div id="liste"></div>
+    </main>
+
+    <script src="soundbox.js"></script>
+    <script>
+      const boite = new SoundBox();
+      const liste = document.getElementById('liste');
+
+      for (const [nom, son] of Object.entries(SoundBox.CATALOGUE)) {
+        const bloc = document.createElement('section');
+        bloc.className = 'son';
+        bloc.innerHTML = `<h2></h2><p class="quand"></p><p class="description"></p><button type="button">▶ Écouter</button>`;
+        bloc.querySelector('h2').innerHTML = `${son.titre} — <code>${nom}</code>`;
+        bloc.querySelector('.quand').textContent = `Quand : ${son.quand}`;
+        bloc.querySelector('.description').textContent = son.description;
+        bloc.querySelector('button').addEventListener('click', () => {
+          boite.deverrouiller();
+          boite.jouer(nom);
+        });
+        liste.appendChild(bloc);
+      }
+
+      document.getElementById('volume').addEventListener('input', e => boite.setVolume(e.target.value));
+      document.getElementById('tout-arreter').addEventListener('click', () => boite.arreterTout());
+    </script>
+  </body>
+</html>

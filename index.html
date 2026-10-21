@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Steering behaviors — IA2 Casablanca G2</title>
+    <meta name="description" content="Trois projets p5.js sur les steering behaviors de Craig Reynolds : F1 neuroévolution, Parking Casanearshore et Boids." />
+    <style>
+      :root {
+        --fond: #f4f1ea;
+        --carte: #ffffff;
+        --texte: #1f242b;
+        --doux: #5a6370;
+        --bordure: #ddd6c8;
+        --accent: #c2410c;
+        --accent-texte: #ffffff;
+        --ombre: 0 6px 24px rgba(31, 36, 43, 0.08);
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --fond: #1a1e24;
+          --carte: #232a32;
+          --texte: #eef1f4;
+          --doux: #a9b4c0;
+          --bordure: #3b434d;
+          --accent: #ffcc66;
+          --accent-texte: #1f242b;
+          --ombre: 0 6px 24px rgba(0, 0, 0, 0.35);
+        }
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--fond);
+        color: var(--texte);
+        font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+        line-height: 1.55;
+      }
+
+      main {
+        max-width: 1040px;
+        margin: 0 auto;
+        padding: 48px 16px 64px;
+      }
+
+      header h1 {
+        margin: 0 0 8px;
+        font-size: clamp(26px, 4vw, 38px);
+      }
+
+      header p {
+        margin: 0;
+        max-width: 720px;
+        color: var(--doux);
+        font-size: 17px;
+      }
+
+      h2 {
+        margin: 40px 0 14px;
+        font-size: 14px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--doux);
+      }
+
+      .essentiels {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+        gap: 18px;
+      }
+
+      .projet {
+        display: flex;
+        flex-direction: column;
+        padding: 24px;
+        background: var(--carte);
+        border: 1px solid var(--bordure);
+        border-radius: 14px;
+        box-shadow: var(--ombre);
+      }
+
+      .projet .numero {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--accent);
+      }
+
+      .projet h3 {
+        margin: 4px 0 10px;
+        font-size: 22px;
+      }
+
+      .projet p {
+        margin: 0 0 12px;
+        color: var(--doux);
+      }
+
+      .projet ul {
+        margin: 0 0 18px;
+        padding-left: 20px;
+        color: var(--doux);
+      }
+
+      .projet li {
+        margin: 3px 0;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: auto;
+      }
+
+      .actions a {
+        padding: 8px 16px;
+        border-radius: 999px;
+        border: 1px solid var(--bordure);
+        color: var(--texte);
+        text-decoration: none;
+        font-size: 15px;
+      }
+
+      .actions a.lancer {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: var(--accent-texte);
+        font-weight: 600;
+      }
+
+      .actions a:hover,
+      .actions a:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+
+      .second {
+        max-width: 640px;
+      }
+
+      footer {
+        margin-top: 48px;
+        font-size: 14px;
+        color: var(--doux);
+      }
+
+      footer a {
+        color: inherit;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Steering behaviors</h1>
+        <p>Trois projets du cours IA2 (Casablanca G2) autour des comportements de pilotage de Craig Reynolds, en JavaScript et p5.js. Ils se lancent directement dans le navigateur.</p>
+      </header>
+
+      <h2>À voir en priorité</h2>
+      <section class="essentiels" aria-label="Projets principaux">
+        <article class="projet">
+          <span class="numero">1 · 11-F1-NeuroEvolution</span>
+          <h3>F1 Neuroévolution</h3>
+          <p>Des voitures de Formule 1 apprennent à piloter seules : des rayons capteurs alimentent un réseau de neurones, et un algorithme génétique fait évoluer chaque lignée.</p>
+          <ul>
+            <li>8 circuits F1, dont 2 extrêmes, et 50 niveaux d'entraînement</li>
+            <li>Réseau de neurones modifiable depuis l'interface</li>
+            <li>Vitrines des voitures, circuits et obstacles ; sauvegarde des modèles</li>
+          </ul>
+          <div class="actions">
+            <a class="lancer" href="11-F1-NeuroEvolution/">Lancer</a>
+            <a href="https://github.com/mohamed314159/IA2_SteeringBehaviors_Casablanca_G2/tree/main/11-F1-NeuroEvolution">Code et documentation</a>
+          </div>
+        </article>
+
+        <article class="projet">
+          <span class="numero">2 · 12-ParkingCasanearshore</span>
+          <h3>Parking Casanearshore</h3>
+          <p>Une matinée de 8h30 à 9h05 au parc d'affaires Casanearshore, sur la vraie carte OpenStreetMap, avec les 8 comportements du cours.</p>
+          <ul>
+            <li>Voitures, tram, convoi G4S, employés, gardiens, chats et papillon</li>
+            <li>Garages souterrains et oiseaux neuro-évolutifs</li>
+            <li>« Voir sur la carte » pour retrouver chaque comportement</li>
+          </ul>
+          <div class="actions">
+            <a class="lancer" href="12-ParkingCasanearshore/">Lancer</a>
+            <a href="https://github.com/mohamed314159/IA2_SteeringBehaviors_Casablanca_G2/tree/main/12-ParkingCasanearshore">Code et documentation</a>
+          </div>
+        </article>
+      </section>
+
+      <h2>En second</h2>
+      <article class="projet second">
+        <span class="numero">3 · 7-Boids</span>
+        <h3>Boids : les perroquets et le chasseur</h3>
+        <p>Une implémentation du jeu des requins vu en cours : les boids deviennent des perroquets façon Minecraft, et le requin un vieux chasseur armé d'une épée en diamant.</p>
+        <div class="actions">
+          <a class="lancer" href="7-Boids/">Lancer</a>
+          <a href="https://github.com/mohamed314159/IA2_SteeringBehaviors_Casablanca_G2/tree/main/7-Boids">Code et documentation</a>
+        </div>
+      </article>
+
+      <footer>
+        Dépôt : <a href="https://github.com/mohamed314159/IA2_SteeringBehaviors_Casablanca_G2">mohamed314159/IA2_SteeringBehaviors_Casablanca_G2</a>
+      </footer>
+    </main>
+  </body>
+</html>
